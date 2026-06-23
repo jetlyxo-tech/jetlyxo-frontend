@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --navy-primary: #0b1b2b;
+  --navy-900: #0f2435;
+  --glass-bg: rgba(21, 45, 66, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --accent: #4f9cff;
+  --highlight: #ff7a18;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply text-white antialiased;
+  background-color: var(--navy-primary);
+  font-feature-settings: "rlig" 1, "calt" 1;
+
+    font-family: system-ui, -apple-system, sans-serif;
+  
+  
+}
+
+/* Glassmorphism base */
+.glass {
+  @apply backdrop-blur-xl border border-white/10;
+  background: var(--glass-bg);
+}
+
+.glass-card {
+  @apply glass rounded-2xl shadow-glass;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-navy-900/50 rounded-full;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-navy-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-navy-500;
+}
+
+/* Horizontal scroll snap for services */
+.scroll-snap-x {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.scroll-snap-x > * {
+  scroll-snap-align: start;
+}
+
+/* 🔥 Toast Animation */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) translateX(0);
+  }
+}
+
+.animate-slideIn {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.2s ease-out;
+}
+
+@keyframes shake {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(10deg); }
+  50% { transform: rotate(-10deg); }
+  75% { transform: rotate(10deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.animate-shake {
+  animation: shake 1s infinite;
+}
