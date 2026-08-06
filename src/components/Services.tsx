@@ -33,7 +33,7 @@ export default function Services({
   };
 
   return (
-    <section className="py-12 md:py-16 px-4">
+    <section className="pt-6 pb-4 px-4">
       <div className="container mx-auto">
 
         <motion.h2

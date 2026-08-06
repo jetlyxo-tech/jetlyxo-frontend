@@ -58,14 +58,14 @@ export default function Hero() {
     <section
   className="
     relative
-     min-h-[48vh]
-     md:min-h-[55vh]
-     lg:min-h-[60vh]
+     min-h-[30vh]
+     md:min-h-[36vh]
+     lg:min-h-[40vh]
     flex
     items-center
     overflow-hidden
-    pt-24
-    pb-16
+    pt-16
+    pb-6
   "
 >
       {/* Background */}

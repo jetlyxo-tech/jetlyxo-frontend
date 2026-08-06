@@ -148,14 +148,11 @@ export default function SearchWidget({
     }
   }
 
-  return (
-    <section
+  <section
   id="search"
   className="
     relative
-    -mt-20
-    md:-mt-24
-    z-20
+    mt-8
     px-4
     pb-12
   "
