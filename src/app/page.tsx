@@ -293,6 +293,11 @@ const formatted = results.map((flight: any) => ({
   </div>
 )}
 
+<Services
+        onFlightsClick={handleFlightsClick}
+        onBusesClick={handleBusesClick}
+        onTrainsClick={handleTrainsClick}
+      />
 
 <SearchWidget
   onFlightResultsAction={(results) => {
@@ -305,11 +310,7 @@ const formatted = results.map((flight: any) => ({
   onScrollToResultsAction={scrollToResults}
 />
 </div>
- <Services
-        onFlightsClick={handleFlightsClick}
-        onBusesClick={handleBusesClick}
-        onTrainsClick={handleTrainsClick}
-      />
+ 
 
       <section
         ref={resultsRef}
