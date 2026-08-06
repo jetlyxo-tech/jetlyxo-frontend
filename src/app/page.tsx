@@ -275,6 +275,7 @@ const formatted = results.map((flight: any) => ({
   <Services
     onFlightsClick={() => {
       setSelectedService("flights");
+      handleFlightsClick();
 
       setTimeout(() => {
         document.getElementById("search")?.scrollIntoView({
@@ -285,6 +286,7 @@ const formatted = results.map((flight: any) => ({
     }}
     onBusesClick={() => {
       setSelectedService("buses");
+      handleBusesClick();
 
       setTimeout(() => {
         document.getElementById("search")?.scrollIntoView({
@@ -295,6 +297,7 @@ const formatted = results.map((flight: any) => ({
     }}
     onTrainsClick={() => {
       setSelectedService("trains");
+      handleTrainsClick();
 
       setTimeout(() => {
         document.getElementById("search")?.scrollIntoView({
@@ -305,7 +308,6 @@ const formatted = results.map((flight: any) => ({
     }}
   />
 </Hero>
-
 {showOffer && (
   <div className="fixed left-3 right-3 sm:left-5 sm:right-auto top-24 bg-white text-black p-4 rounded-xl shadow-lg w-auto sm:w-[250px] z-40">
     <button
@@ -406,7 +408,7 @@ const formatted = results.map((flight: any) => ({
       </h2>
 
       <input
-        placeholder="+91 Enter Mobile Number"-
+        placeholder="+91 Enter Mobile Number"
         className="w-full border p-2 rounded mb-3"
       />
 
