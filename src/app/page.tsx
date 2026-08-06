@@ -338,34 +338,27 @@ const formatted = results.map((flight: any) => ({
 
 
 
-{selectedService === "flights" && (
+{selectedService && (
   <SearchWidget
+    service={selectedService}
     onFlightResultsAction={(results) => {
-      setBusResults(null);
-      setTrainResults(null);
-      setFlightResults(results);
-    }}
-    onScrollToResultsAction={scrollToResults}
-  />
-)}
+      if (selectedService === "flights") {
+        setFlightResults(results);
+        setBusResults(null);
+        setTrainResults(null);
+      }
 
-{selectedService === "buses" && (
-  <SearchWidget
-    onFlightResultsAction={(results) => {
-      setBusResults(results);
-      setTrainResults(null);
-      setFlightResults(null);
-    }}
-    onScrollToResultsAction={scrollToResults}
-  />
-)}
+      if (selectedService === "buses") {
+        setBusResults(results);
+        setFlightResults(null);
+        setTrainResults(null);
+      }
 
-{selectedService === "trains" && (
-  <SearchWidget
-    onFlightResultsAction={(results) => {
-      setBusResults(null);
-      setTrainResults(results);
-      setFlightResults(null);
+      if (selectedService === "trains") {
+        setTrainResults(results);
+        setFlightResults(null);
+        setBusResults(null);
+      }
     }}
     onScrollToResultsAction={scrollToResults}
   />

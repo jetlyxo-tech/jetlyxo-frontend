@@ -45,12 +45,23 @@ export default function Services({
           Travel Services
         </motion.h2>
 
-        <div className="overflow-x-auto flex gap-4 md:gap-5 pb-4 -mx-4 px-4">
+        <div
+  className="
+    grid
+    grid-cols-2
+    sm:grid-cols-3
+    lg:grid-cols-7
+    gap-4
+    max-w-7xl
+    mx-auto
+  "
+>
 
           {SERVICES.map((service, i) => (
             <motion.div
-              key={service.name}
-              className="flex-shrink-0 w-[140px] sm:w-[160px]"
+  key={service.name}
+  className="w-full"
+>
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -59,11 +70,24 @@ export default function Services({
               <motion.button
                 type="button"
                 onClick={() => service.api && handleClick(service.api)}
-                className={`w-full glass-card p-5 h-full flex flex-col items-center justify-center text-center relative ${
-                  service.highlight
-                    ? "shadow-glow-orange border-jetly-highlight/30"
-                    : "hover:shadow-glow hover:border-jetly-accent/20"
-                }`}
+                className={`
+  w-full
+  h-40
+  glass-card
+  p-5
+  flex
+  flex-col
+  items-center
+  justify-center
+  text-center
+  relative
+  transition-all
+  ${
+    service.highlight
+      ? "shadow-glow-orange border-jetly-highlight/30"
+      : "hover:shadow-glow hover:border-jetly-accent/20"
+  }
+`}}
                 whileHover={{ y: -6, scale: 1.02 }}
               >
                 {service.badge && (

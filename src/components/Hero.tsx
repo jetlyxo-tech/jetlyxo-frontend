@@ -56,17 +56,14 @@ export function AnimatedPlanes() {
 export default function Hero() {
   return (
     <section
+ 
   className="
     relative
-     min-h-[30vh]
-     md:min-h-[36vh]
-     lg:min-h-[40vh]
-    flex
-    items-center
+    pt-24
+    pb-10
     overflow-hidden
-    pt-16
-    pb-6
   "
+
 >
       {/* Background */}
       <div className="absolute inset-0 bg-navy-900">
@@ -83,7 +80,7 @@ export default function Hero() {
       {/* Gradient overlay */}
       <div className="absolute inset-0 bg-hero-gradient" />
 
-      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-10 text-center">
         <motion.h1
           className="
 text-4xl
