@@ -33,7 +33,7 @@ export default function Services({
   };
 
   return (
-    <section className="pt-6 pb-4 px-4">
+    <section className="pt-2 pb-2 px-4">
       <div className="container mx-auto">
 
         <motion.h2

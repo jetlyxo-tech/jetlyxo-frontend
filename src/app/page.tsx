@@ -271,11 +271,43 @@ const formatted = results.map((flight: any) => ({
    
  
      
-      <Hero />
+     <Hero>
+  <Services
+    onFlightsClick={() => {
+      setSelectedService("flights");
 
-      {showOffer && (
-   <div className="fixed left-3 right-3 sm:left-5 sm:right-auto top-24 bg-white text-black p-4 rounded-xl shadow-lg w-auto sm:w-[250px] z-40">
+      setTimeout(() => {
+        document.getElementById("search")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 100);
+    }}
+    onBusesClick={() => {
+      setSelectedService("buses");
 
+      setTimeout(() => {
+        document.getElementById("search")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 100);
+    }}
+    onTrainsClick={() => {
+      setSelectedService("trains");
+
+      setTimeout(() => {
+        document.getElementById("search")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 100);
+    }}
+  />
+</Hero>
+
+{showOffer && (
+  <div className="fixed left-3 right-3 sm:left-5 sm:right-auto top-24 bg-white text-black p-4 rounded-xl shadow-lg w-auto sm:w-[250px] z-40">
     <button
       onClick={() => setShowOffer(false)}
       className="absolute top-1 right-2 text-sm"
@@ -294,74 +326,35 @@ const formatted = results.map((flight: any) => ({
     <button className="mt-3 bg-blue-600 text-white px-3 py-1 rounded text-sm">
       View Deals
     </button>
-
   </div>
 )}
- <Services
-  onFlightsClick={() => {
-    setSelectedService("flights");
-
-  setTimeout(() => {
-    document
-      .getElementById("search")
-      ?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-  }, 100);
-}}
-  onBusesClick={() => {
-    setSelectedService("buses");
-
-  setTimeout(() => {
-    document
-      .getElementById("search")
-      ?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-  }, 100);
-}}
-  onTrainsClick={() => {
-    setSelectedService("trains");
-
-  setTimeout(() => {
-    document
-      .getElementById("search")
-      ?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-  }, 100);
-}}
-/>
-
-
 
 {selectedService && (
-  <SearchWidget
-    service={selectedService}
-    onFlightResultsAction={(results) => {
-      if (selectedService === "flights") {
-        setFlightResults(results);
-        setBusResults(null);
-        setTrainResults(null);
-      }
+  <div id="search" className="container mx-auto px-4 py-8">
+    <SearchWidget
+      service={selectedService}
+      onFlightResultsAction={(results) => {
+        if (selectedService === "flights") {
+          setFlightResults(results);
+          setBusResults(null);
+          setTrainResults(null);
+        }
 
-      if (selectedService === "buses") {
-        setBusResults(results);
-        setFlightResults(null);
-        setTrainResults(null);
-      }
+        if (selectedService === "buses") {
+          setBusResults(results);
+          setFlightResults(null);
+          setTrainResults(null);
+        }
 
-      if (selectedService === "trains") {
-        setTrainResults(results);
-        setFlightResults(null);
-        setBusResults(null);
-      }
-    }}
-    onScrollToResultsAction={scrollToResults}
-  />
+        if (selectedService === "trains") {
+          setTrainResults(results);
+          setFlightResults(null);
+          setBusResults(null);
+        }
+      }}
+      onScrollToResultsAction={scrollToResults}
+    />
+  </div>
 )}
 
       <section
@@ -413,7 +406,7 @@ const formatted = results.map((flight: any) => ({
       </h2>
 
       <input
-        placeholder="+91 Enter Mobile Number"
+        placeholder="+91 Enter Mobile Number"-
         className="w-full border p-2 rounded mb-3"
       />
 

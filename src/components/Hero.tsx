@@ -1,6 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { ReactNode } from "react";
+
+type HeroProps = {
+  children?: ReactNode;
+};
 
 export function PlaneIcon({ className }: { className?: string }) {
   return (
@@ -22,30 +27,52 @@ export function AnimatedPlanes() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       <motion.div
-        className="absolute top-[15%] left-0 text-jetly-accent/30 w-8 h-8"
+        className="absolute top-[15%] left-0 text-jetly-accent/30"
         animate={{ x: ["-10%", "110%"] }}
-        transition={{ duration: 22, repeat: Infinity, ease: "linear" }}
+        transition={{
+          duration: 22,
+          repeat: Infinity,
+          ease: "linear",
+        }}
       >
         <PlaneIcon className="w-8 h-8 rotate-[-15deg]" />
       </motion.div>
+
       <motion.div
-        className="absolute top-[35%] left-0 text-jetly-accent/25 w-6 h-6"
+        className="absolute top-[35%] left-0 text-jetly-accent/25"
         animate={{ x: ["-10%", "110%"] }}
-        transition={{ duration: 18, repeat: Infinity, ease: "linear", delay: 2 }}
+        transition={{
+          duration: 18,
+          repeat: Infinity,
+          ease: "linear",
+          delay: 2,
+        }}
       >
         <PlaneIcon className="w-6 h-6 rotate-[10deg]" />
       </motion.div>
+
       <motion.div
-        className="absolute top-[55%] left-0 text-jetly-accent/20 w-7 h-7"
+        className="absolute top-[55%] left-0 text-jetly-accent/20"
         animate={{ x: ["-10%", "110%"] }}
-        transition={{ duration: 25, repeat: Infinity, ease: "linear", delay: 5 }}
+        transition={{
+          duration: 25,
+          repeat: Infinity,
+          ease: "linear",
+          delay: 5,
+        }}
       >
         <PlaneIcon className="w-7 h-7 rotate-[-5deg]" />
       </motion.div>
+
       <motion.div
-        className="absolute top-[75%] left-0 text-jetly-accent/20 w-5 h-5"
+        className="absolute top-[75%] left-0 text-jetly-accent/20"
         animate={{ x: ["-10%", "110%"] }}
-        transition={{ duration: 20, repeat: Infinity, ease: "linear", delay: 1 }}
+        transition={{
+          duration: 20,
+          repeat: Infinity,
+          ease: "linear",
+          delay: 1,
+        }}
       >
         <PlaneIcon className="w-5 h-5 rotate-[12deg]" />
       </motion.div>
@@ -53,66 +80,60 @@ export function AnimatedPlanes() {
   );
 }
 
-export default function Hero() {
+export default function Hero({ children }: HeroProps) {
   return (
-    <section
- 
-  className="
-    relative
-    pt-24
-    pb-10
-    overflow-hidden
-  "
-
->
-      {/* Background */}
-      <div className="absolute inset-0 bg-navy-900">
+    <section className="relative overflow-hidden bg-navy-900">
+      {/* Background Pattern */}
+      <div className="absolute inset-0">
         <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-30"
+          className="absolute inset-0 opacity-30 bg-cover bg-center"
           style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%234f9cff' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cg fill='%234f9cff' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM36 4V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
           }}
         />
       </div>
 
       <AnimatedPlanes />
 
-      {/* Gradient overlay */}
       <div className="absolute inset-0 bg-hero-gradient" />
 
-      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-10 text-center">
+      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-10">
+
         <motion.h1
-          className="
-text-4xl
-sm:text-5xl
-lg:text-6xl
-font-bold
-tracking-tight
-text-white
-mb-3
-"
+          className="text-center text-4xl sm:text-5xl lg:text-6xl font-bold text-white tracking-tight"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
           Plan Your Perfect Journey
         </motion.h1>
+
         <motion.p
-          className="
-text-lg
-md:text-xl
-text-jetly-accent/90
-max-w-2xl
-mx-auto
-mb-0
-"
+          className="mt-4 text-center text-lg md:text-xl text-jetly-accent/90 max-w-2xl mx-auto"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.15 }}
+          transition={{
+            duration: 0.6,
+            delay: 0.15,
+          }}
         >
           Book flights, hotels and trains instantly with AI
         </motion.p>
-        
+
+        {/* Travel Services */}
+        {children && (
+          <motion.div
+            className="mt-14"
+            initial={{ opacity: 0, y: 25 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              duration: 0.5,
+              delay: 0.3,
+            }}
+          >
+            {children}
+          </motion.div>
+        )}
       </div>
     </section>
   );
