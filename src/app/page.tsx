@@ -263,7 +263,8 @@ const formatted = results.map((flight: any) => ({
 
   return (
     <main className="min-h-screen bg-navy-950">
-
+   
+ <div className="relative">
      
       <Hero />
 
@@ -293,12 +294,6 @@ const formatted = results.map((flight: any) => ({
 )}
 
 
-      <Services
-        onFlightsClick={handleFlightsClick}
-        onBusesClick={handleBusesClick}
-        onTrainsClick={handleTrainsClick}
-      />
-
 <SearchWidget
   onFlightResultsAction={(results) => {
     console.log("HOME RECEIVED:", results.length, results);
@@ -309,6 +304,12 @@ const formatted = results.map((flight: any) => ({
   }}
   onScrollToResultsAction={scrollToResults}
 />
+</div>
+ <Services
+        onFlightsClick={handleFlightsClick}
+        onBusesClick={handleBusesClick}
+        onTrainsClick={handleTrainsClick}
+      />
 
       <section
         ref={resultsRef}

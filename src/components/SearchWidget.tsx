@@ -149,7 +149,17 @@ export default function SearchWidget({
   }
 
   return (
-    <section className="py-10 px-4">
+    <section
+  id="search"
+  className="
+    relative
+    -mt-20
+    md:-mt-24
+    z-20
+    px-4
+    pb-12
+  "
+>
 
       <div className="max-w-7xl mx-auto">
 
@@ -587,6 +597,51 @@ export default function SearchWidget({
                 {error}
               </p>
             )}
+{/* FEATURES */}
+
+<div className="lg:col-span-12 mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+
+  <motion.div
+    whileHover={{ y: -5 }}
+    className="rounded-2xl bg-slate-800/60 border border-slate-700 p-5 text-center transition-all duration-300 hover:border-blue-500 hover:shadow-xl"
+  >
+    <div className="text-3xl mb-2">⚡</div>
+    <h3 className="text-white font-semibold">
+      Instant Booking
+    </h3>
+    <p className="text-slate-400 text-sm mt-1">
+      Book your trip in seconds.
+    </p>
+  </motion.div>
+
+  <motion.div
+    whileHover={{ y: -5 }}
+    className="rounded-2xl bg-slate-800/60 border border-slate-700 p-5 text-center transition-all duration-300 hover:border-blue-500 hover:shadow-xl"
+  >
+    <div className="text-3xl mb-2">🤖</div>
+    <h3 className="text-white font-semibold">
+      AI Powered
+    </h3>
+    <p className="text-slate-400 text-sm mt-1">
+      Smart travel recommendations.
+    </p>
+  </motion.div>
+
+  <motion.div
+    whileHover={{ y: -5 }}
+    className="rounded-2xl bg-slate-800/60 border border-slate-700 p-5 text-center transition-all duration-300 hover:border-blue-500 hover:shadow-xl"
+  >
+    <div className="text-3xl mb-2">🛡</div>
+    <h3 className="text-white font-semibold">
+      Secure Payments
+    </h3>
+    <p className="text-slate-400 text-sm mt-1">
+      Safe & encrypted transactions.
+    </p>
+  </motion.div>
+
+</div>
+
 
           </form>
 

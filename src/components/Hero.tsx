@@ -55,7 +55,19 @@ export function AnimatedPlanes() {
 
 export default function Hero() {
   return (
-    <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
+    <section
+  className="
+    relative
+     min-h-[48vh]
+     md:min-h-[55vh]
+     lg:min-h-[60vh]
+    flex
+    items-center
+    overflow-hidden
+    pt-24
+    pb-16
+  "
+>
       {/* Background */}
       <div className="absolute inset-0 bg-navy-900">
         <div
@@ -73,7 +85,15 @@ export default function Hero() {
 
       <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <motion.h1
-          className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-white mb-4 md:mb-6"
+          className="
+text-4xl
+sm:text-5xl
+lg:text-6xl
+font-bold
+tracking-tight
+text-white
+mb-3
+"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
@@ -81,37 +101,21 @@ export default function Hero() {
           Plan Your Perfect Journey
         </motion.h1>
         <motion.p
-          className="text-lg sm:text-xl md:text-2xl text-jetly-accent/90 max-w-2xl mx-auto mb-8 md:mb-12"
+          className="
+text-lg
+md:text-xl
+text-jetly-accent/90
+max-w-2xl
+mx-auto
+mb-0
+"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.15 }}
         >
           Book flights, hotels and trains instantly with AI
         </motion.p>
-        <motion.a
-          href="#search"
-          className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-jetly-accent hover:bg-jetly-accent/90 text-white font-semibold text-lg shadow-glow hover:shadow-[0_0_50px_-5px_rgba(79,156,255,0.6)] transition-all duration-300"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          Search Flights
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
-        </motion.a>
+        
       </div>
     </section>
   );
