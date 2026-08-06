@@ -45,8 +45,13 @@ const [showOffer, setShowOffer] = useState(true);
 
 const [showBot, setShowBot] = useState(true);
 const [openChat, setOpenChat] = useState(false);
-  const [loadingService, setLoadingService] =
-    useState<"flights" | "buses" | "trains" | null>(null);
+  const [loadingService, setLoadingService] = useState<
+  "flights" | "buses" | "trains" | null
+>(null);
+
+const [selectedService, setSelectedService] = useState<
+  "flights" | "buses" | "trains" | null
+>(null);
 
   const [requestLock, setRequestLock] = useState(false);
 
@@ -264,7 +269,7 @@ const formatted = results.map((flight: any) => ({
   return (
     <main className="min-h-screen bg-navy-950">
    
- <div className="relative">
+ 
      
       <Hero />
 
@@ -292,25 +297,79 @@ const formatted = results.map((flight: any) => ({
 
   </div>
 )}
+ <Services
+  onFlightsClick={() => {
+    setSelectedService("flights");
 
-<Services
-        onFlightsClick={handleFlightsClick}
-        onBusesClick={handleBusesClick}
-        onTrainsClick={handleTrainsClick}
-      />
+  setTimeout(() => {
+    document
+      .getElementById("search")
+      ?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+  }, 100);
+}}
+  onBusesClick={() => {
+    setSelectedService("buses");
 
-<SearchWidget
-  onFlightResultsAction={(results) => {
-    console.log("HOME RECEIVED:", results.length, results);
-  
-    setBusResults(null);
-    setTrainResults(null);
-    setFlightResults(results);
-  }}
-  onScrollToResultsAction={scrollToResults}
+  setTimeout(() => {
+    document
+      .getElementById("search")
+      ?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+  }, 100);
+}}
+  onTrainsClick={() => {
+    setSelectedService("trains");
+
+  setTimeout(() => {
+    document
+      .getElementById("search")
+      ?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+  }, 100);
+}}
 />
-</div>
- 
+
+
+
+{selectedService === "flights" && (
+  <SearchWidget
+    onFlightResultsAction={(results) => {
+      setBusResults(null);
+      setTrainResults(null);
+      setFlightResults(results);
+    }}
+    onScrollToResultsAction={scrollToResults}
+  />
+)}
+
+{selectedService === "buses" && (
+  <SearchWidget
+    onFlightResultsAction={(results) => {
+      setBusResults(results);
+      setTrainResults(null);
+      setFlightResults(null);
+    }}
+    onScrollToResultsAction={scrollToResults}
+  />
+)}
+
+{selectedService === "trains" && (
+  <SearchWidget
+    onFlightResultsAction={(results) => {
+      setBusResults(null);
+      setTrainResults(results);
+      setFlightResults(null);
+    }}
+    onScrollToResultsAction={scrollToResults}
+  />
+)}
 
       <section
         ref={resultsRef}
