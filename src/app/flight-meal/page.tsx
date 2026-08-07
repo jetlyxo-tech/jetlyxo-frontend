@@ -64,10 +64,15 @@ const pan = params.get("pan") || "";
     }
   }, [did]);
 
-  const meals =
-    mealResponse?.data?.dtl?.[0]?.meal ||
-    mealResponse?.data?.meal ||
-    [];
+const mealSection = mealResponse?.dtl?.find(
+  (item: any) => item.typ === "Meal"
+);
+
+const meals = mealSection?.mel ?? [];
+
+console.log("Meal Response:", mealResponse);
+console.log("Meal Section:", mealSection);
+console.log("Meals:", meals);
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-8">
@@ -172,7 +177,7 @@ const pan = params.get("pan") || "";
                 >
 
                   <div className="font-bold text-lg">
-                    {item.name || item.nm || "Meal"}
+                    {item.des}
                   </div>
 
                   <div className="text-sm text-gray-300 mt-1">
@@ -181,7 +186,7 @@ const pan = params.get("pan") || "";
 
                   <div className="mt-3 text-xl font-bold">
 
-                    ₹{item.prc || 0}
+                    ₹{item.amt}
 
                   </div>
 
@@ -228,7 +233,7 @@ const pan = params.get("pan") || "";
 
               <span className="ml-2 font-bold">
 
-                {selectedMeal.name || selectedMeal.nm}
+                {selectedMeal.des}
 
               </span>
 
@@ -240,7 +245,7 @@ const pan = params.get("pan") || "";
 
               <span className="ml-2 font-bold">
 
-                ₹{selectedMeal.prc}
+                ₹{selectedMeal.amt}
 
               </span>
 
@@ -304,14 +309,12 @@ const pan = params.get("pan") || "";
             `&mealCode=${encodeURIComponent(selectedMeal?.code || "")}` +
 
             `&mealName=${encodeURIComponent(
-              selectedMeal?.name ||
-              selectedMeal?.nm ||
-              ""
-            )}` +
+             selectedMeal?.des || ""
+              )}` +
 
             `&mealPrice=${encodeURIComponent(
-              selectedMeal?.prc || "0"
-            )}`
+             selectedMeal?.amt || "0"
+             )}`
 
           );
 
