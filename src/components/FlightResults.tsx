@@ -183,6 +183,8 @@ const url =
       type="button"
       onClick={handleClick}
       className="
+w-full
+sm:w-auto
 bg-gradient-to-r
 from-blue-600
 to-cyan-500
@@ -242,16 +244,21 @@ export default function FlightResults({
       
       const [selectedAirlines, setSelectedAirlines] = useState<string[]>([]);
       
-      const [maxPrice, setMaxPrice] = useState(0);
+      const [priceLimit, setPriceLimit] = useState(0);
+      const [sliderMax, setSliderMax] = useState(0);
 
 useEffect(() => {
-  if (flightList.length > 0) {
-    const highest = Math.max(
-      ...flightList.map(f => Number(f.price ?? 0))
-    );
+  if (!flightList.length) return;
 
-    setMaxPrice(highest);
-  }
+  const highest = Math.max(
+    ...flightList.map((f) => Number(f.price ?? 0))
+  );
+
+  setSliderMax(highest);
+
+  setPriceLimit((prev) =>
+    prev === 0 ? highest : Math.min(prev, highest)
+  );
 }, [flightList]);
   /* ---------------- SYNC PROPS ---------------- */
 
@@ -344,17 +351,17 @@ useEffect(() => {
         );
       }
     
-      if (maxPrice > 0) {
-        list = list.filter(f => f.priceNumber <= maxPrice);
-      }
+      list = list.filter((f) => f.priceNumber <= priceLimit);
     
       return list;
     
     }, [
-      normalizedFlights,
-      filters,
-      selectedAirlines,
-      maxPrice,
+      
+  normalizedFlights,
+  filters,
+  selectedAirlines,
+  priceLimit,
+
     ]);
 
   const sortedFlights =
@@ -410,12 +417,13 @@ useEffect(() => {
 
     }, [filteredFlights, sortBy]);
     console.log({
-      flightList,
-      normalizedFlights,
-      filteredFlights,
-      sortedFlights,
-      maxPrice,
-    });
+  flightList,
+  normalizedFlights,
+  filteredFlights,
+  sortedFlights,
+  priceLimit,
+  sliderMax,
+});
     if (!sortedFlights.length) {
   return (
     <div className="glass-card p-8 text-center">
@@ -433,15 +441,15 @@ useEffect(() => {
 return (
   <div
     id="results"
-      className="grid lg:grid-cols-[280px_1fr] gap-6"
+      className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6"
     >
 
       
   {/* LEFT SIDEBAR */}
 
-<div className="glass-card p-5 h-fit sticky top-24 rounded-2xl">
-
-<div className="flex items-center justify-between mb-6">
+<div
+  className="glass-card p-5 h-fit rounded-2xl lg:sticky lg:top-24"
+>
 
   <div>
     <h3 className="text-white font-semibold text-lg">
@@ -456,24 +464,24 @@ return (
 
   <button
     onClick={() => {
+  setFilters({
+    nonStop: false,
+    oneStop: false,
+    earlyMorning: false,
+    morning: false,
+    afternoon: false,
+    evening: false,
+  });
 
-      setFilters({
-        nonStop: false,
-        oneStop: false,
+  setSelectedAirlines([]);
 
-        earlyMorning: false,
-        morning: false,
-        afternoon: false,
-        evening: false,
-      });
+  const highest = Math.max(
+    ...flightList.map((f) => Number(f.price ?? 0))
+  );
 
-      setSelectedAirlines([]);
-
-      setMaxPrice(
-        Math.max(...flightList.map(f => Number(f.price ?? 0)))
-      );
-
-    }}
+  setSliderMax(highest);
+  setPriceLimit(highest);
+}}
     className="text-cyan-400 text-sm hover:text-cyan-300"
   >
     Clear
@@ -484,32 +492,32 @@ return (
 {/* PRICE */}
 
 <div className="mb-8">
-
   <h4 className="text-white font-semibold mb-4">
     Price Range
   </h4>
 
   <input
-  type="range"
-  min={0}
-  max={Math.max(maxPrice, 1000)}
-  step={500}
-  value={maxPrice}
-  onChange={(e) => setMaxPrice(Number(e.target.value))}
+    type="range"
+    min={0}
+    max={sliderMax}
+    step={100}
+    value={priceLimit}
+    onChange={(e) =>
+      setPriceLimit(Number(e.target.value))
+    }
     className="w-full accent-cyan-500"
   />
 
   <div className="flex justify-between mt-3 text-sm text-white/60">
-
     <span>₹0</span>
 
     <span>
-      ₹{maxPrice.toLocaleString("en-IN")}
+      ₹{priceLimit.toLocaleString("en-IN")}
     </span>
-
   </div>
-
 </div>
+
+ 
 
 {/* STOPS */}
 
@@ -521,7 +529,7 @@ return (
 
   <div className="space-y-3">
 
-    <label className="flex items-center gap-3 text-white cursor-pointer">
+    <label className="flex flex-wrap items-center gap-3 text-white cursor-pointer">
 
       <input
         type="checkbox"
@@ -665,7 +673,7 @@ return (
 
   <div>
 
-<div className="glass-card p-3 mb-6 flex flex-wrap gap-2">
+<div className="glass-card p-3 mb-6 flex gap-2 overflow-x-auto">
 
   {SORT_OPTIONS.map((opt) => (
     <button
@@ -687,7 +695,23 @@ return (
           {sortedFlights.map((flight, i) => (
             <motion.div
               key={flight.id}
-              className="glass-card p-6 rounded-2xl border border-white/10 hover:border-cyan-500/30 transition-all duration-300 flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+              className="
+glass-card
+p-6
+rounded-2xl
+border
+border-white/10
+hover:border-cyan-500/30
+transition-all
+duration-300
+flex
+flex-col
+lg:flex-row
+justify-between
+items-start
+lg:items-center
+gap-6
+"
               initial={{
                 opacity: 0,
                 y: 10,
@@ -757,7 +781,7 @@ return (
 </div>
 
 
-<div className="flex items-center gap-3 mt-4">
+<div className="flex flex-wrap items-center gap-3 mt-4">
 
   <span className="font-semibold text-white">
     {from}
@@ -816,10 +840,9 @@ return (
 </p>
               </div>
   
-              <div className="flex flex-col items-end gap-3">
+              <div className="flex flex-col sm:items-end items-start w-full sm:w-auto gap-3">
 
-<div className="text-right">
-
+<div className="w-full lg:w-auto flex flex-col items-start lg:items-end gap-3">
 <p className="text-xs text-white/40">
   Per Traveller
 </p>
