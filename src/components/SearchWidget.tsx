@@ -147,7 +147,7 @@ export default function SearchWidget({
       setLoading(false);
     }
   }
-
+ return (
   <section
   id="search"
   className="

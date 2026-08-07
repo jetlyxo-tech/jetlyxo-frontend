@@ -869,7 +869,8 @@ gap-6
           ))}
         </div>
   
-      </div>
+        </div>
+      </section>
     </div>
   );
 }
