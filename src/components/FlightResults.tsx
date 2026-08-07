@@ -1,29 +1,30 @@
 ﻿"use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
-import { getToken } from "@/lib/auth";
-import { searchFlights } from "@/lib/api";
-import { Flight } from "@/types";
-import { useCallback } from "react";
-import { toast } from "sonner";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+
+import { Flight } from "@/types";
+import { searchFlights } from "@/lib/api";
+import { getToken } from "@/lib/auth";
+
+/* ---------------------------------------------
+   AIRLINE LOGOS
+--------------------------------------------- */
 
 const airlineLogos: Record<string, string> = {
-  "IndiGo": "/airlines/indigo.png",
-
+  IndiGo: "/airlines/indigo.png",
   "Air India": "/airlines/airindia.png",
-
   "Air India Express": "/airlines/aix.png",
-
   "Akasa Air": "/airlines/akasa.png",
-
-  "SpiceJet": "/airlines/spicejet.png",
+  SpiceJet: "/airlines/spicejet.png",
 };
 
-
-/* ---------------- SORT OPTIONS ---------------- */
+/* ---------------------------------------------
+   SORT OPTIONS
+--------------------------------------------- */
 
 const SORT_OPTIONS = [
   "Cheapest",
@@ -32,7 +33,10 @@ const SORT_OPTIONS = [
   "Airline",
 ] as const;
 
-/* ---------------- TYPES ---------------- */
+/* ---------------------------------------------
+   TYPES
+--------------------------------------------- */
+
 type NormalizedFlight = {
   id: string | number;
 
@@ -43,84 +47,96 @@ type NormalizedFlight = {
 
   duration: string;
 
-  stops: string;
-
   dep: string;
+
+  stops: string;
 
   seats: number | null;
 
   cabin: string;
+
   fareType: string;
 
   badge?: string;
 
   searchId?: string;
+
   tId?: string;
 };
 
-/* ---------------- HELPERS ---------------- */
+type FlightResultsProps = {
+  flights: Flight[];
+
+  from?: string;
+
+  to?: string;
+
+  departureDate?: string;
+};
+
+/* ---------------------------------------------
+   HELPERS
+--------------------------------------------- */
 
 function parseDuration(duration: string) {
-  if (!duration) return 999999;
+  const hrs = duration.match(/(\d+)h/);
+  const mins = duration.match(/(\d+)m/);
 
-  const hoursMatch = duration.match(/(\d+)h/);
-  const minsMatch = duration.match(/(\d+)m/);
-
-  const hours = hoursMatch ? parseInt(hoursMatch[1]) : 0;
-  const mins = minsMatch ? parseInt(minsMatch[1]) : 0;
-
-  return hours * 60 + mins;
+  return (
+    (hrs ? Number(hrs[1]) : 0) * 60 +
+    (mins ? Number(mins[1]) : 0)
+  );
 }
 
-/* ---------------- NORMALIZE FLIGHT ---------------- */
-
 function normalizeFlight(
-  f: Flight,
+  flight: Flight,
   index: number
 ): NormalizedFlight {
-  const price = f.price ?? 0;
-
-  const seats = f.seats ?? null;
+  const price = Number(flight.price ?? 0);
 
   return {
-    id: f.id ?? index + 1,
-  
-    airline: f.airline || "Unknown Airline",
-  
+    id: flight.id ?? index,
+
+    airline: flight.airline || "Unknown Airline",
+
     priceNumber: price,
-  
+
     priceDisplay:
       price > 0
         ? `₹${price.toLocaleString("en-IN")}`
         : "—",
-  
-    duration: f.duration || "N/A",
-  
+
+    duration: flight.duration || "N/A",
+
+    dep: flight.departure || "--:--",
+
     stops:
-      typeof f.stops === "number"
-        ? f.stops === 0
+      typeof flight.stops === "number"
+        ? flight.stops === 0
           ? "Non-stop"
-          : `${f.stops} Stop`
+          : `${flight.stops} Stop`
         : "Non-stop",
-  
-    dep: f.departure ?? "--:--",
-  
-    seats,
-  
+
+    seats: flight.seats ?? null,
+
     cabin: "Economy",
-  
+
     fareType: "Regular Fare",
-  
+
     badge:
       index === 0
         ? "Best Value"
         : undefined,
-  
-    searchId: f.searchId,
-  
-    tId: f.tId,
+
+    searchId: flight.searchId,
+
+    tId: flight.tId,
   };
 }
+
+/* ---------------------------------------------
+   BOOK BUTTON
+--------------------------------------------- */
 
 function BookNowButton({
   priceNumber,
@@ -137,260 +153,238 @@ function BookNowButton({
   searchId?: string;
   tId?: string;
 }) {
-
   const router = useRouter();
 
   const handleClick = () => {
-
     if (!flightId) {
       toast.error("Flight ID missing");
       return;
     }
 
-   
-const token = getToken();
+    const url =
+      `/flight-passenger?flightId=${encodeURIComponent(
+        String(flightId)
+      )}` +
+      `&searchId=${encodeURIComponent(searchId ?? "")}` +
+      `&tId=${encodeURIComponent(tId ?? "")}` +
+      `&price=${priceNumber}` +
+      `&airline=${encodeURIComponent(airline)}` +
+      `&duration=${encodeURIComponent(duration)}`;
 
-if (!token) {
-
-  router.push(
-    `/login?redirect=${encodeURIComponent(
-      `/flight-passenger?flightId=${encodeURIComponent(String(flightId))}` +
-        `&searchId=${encodeURIComponent(searchId ?? "")}` +
-        `&tId=${encodeURIComponent(tId ?? "")}` +
-        `&price=${encodeURIComponent(String(priceNumber))}` +
-        `&airline=${encodeURIComponent(airline)}` +
-        `&duration=${encodeURIComponent(duration)}`  
-    )}`
-  );
-
-  return;
-}
-
-
-const url =
-`/flight-passenger?flightId=${encodeURIComponent(String(flightId))}` +
-`&searchId=${encodeURIComponent(searchId ?? "")}` +
-`&tId=${encodeURIComponent(tId ?? "")}` +
-`&price=${encodeURIComponent(String(priceNumber))}` +
-`&airline=${encodeURIComponent(airline)}` +
-`&duration=${encodeURIComponent(duration)}`;
+    if (!getToken()) {
+      router.push(
+        `/login?redirect=${encodeURIComponent(url)}`
+      );
+      return;
+    }
 
     router.push(url);
   };
 
   return (
     <button
-      type="button"
       onClick={handleClick}
-      className="
-w-full
-sm:w-auto
-bg-gradient-to-r
-from-blue-600
-to-cyan-500
-hover:scale-105
-transition-all
-duration-300
-px-5
-py-2.5
-rounded-xl
-text-white
-font-semibold
-shadow-lg
-"
+      className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:scale-105 transition text-white font-semibold shadow-lg"
     >
       Book Flight →
     </button>
   );
 }
 
-
-
-type FlightResultsProps = {
-  flights: Flight[];
-  from?: string;
-  to?: string;
-  departureDate?: string;
-};
+/* ---------------------------------------------
+   COMPONENT
+--------------------------------------------- */
 
 export default function FlightResults({
   flights,
   from = "BLR",
   to = "DEL",
   departureDate,
-}: FlightResultsProps)  {
-
-
+}: FlightResultsProps) {
+  const [flightList, setFlightList] =
+    useState<Flight[]>(flights);
 
   const [sortBy, setSortBy] =
-    useState<
-      (typeof SORT_OPTIONS)[number]
-    >("Cheapest");
+    useState<(typeof SORT_OPTIONS)[number]>(
+      "Cheapest"
+    );
 
-  const [flightList, setFlightList] =
-      useState<Flight[]>(flights);
+  const [filters, setFilters] = useState({
+    nonStop: false,
+    oneStop: false,
 
-    
+    earlyMorning: false,
+    morning: false,
+    afternoon: false,
+    evening: false,
+  });
 
-      const [filters, setFilters] = useState({
-        nonStop: false,
-        oneStop: false,
-      
-        earlyMorning: false,
-        morning: false,
-        afternoon: false,
-        evening: false,
-      });
-      
-      const [selectedAirlines, setSelectedAirlines] = useState<string[]>([]);
-      
-      const [priceLimit, setPriceLimit] = useState(0);
-useEffect(() => {
-  console.log("Price Slider:", priceLimit);
-}, [priceLimit]);
-      const [sliderMax, setSliderMax] = useState(0);
+  const [selectedAirlines, setSelectedAirlines] =
+    useState<string[]>([]);
 
-useEffect(() => {
-  if (!flightList.length) return;
+  const [priceLimit, setPriceLimit] =
+    useState(0);
 
-  const highest = Math.max(
-    ...flightList.map((f) => Number(f.price ?? 0))
-  );
+  const [sliderMax, setSliderMax] =
+    useState(0);
 
-  setSliderMax(highest);
-
-  setPriceLimit((prev) =>
-    prev === 0 ? highest : Math.min(prev, highest)
-  );
-}, [flightList]);
-  /* ---------------- SYNC PROPS ---------------- */
+/* ---------------------------------------------
+   EFFECTS
+--------------------------------------------- */
 
   useEffect(() => {
     setFlightList(flights);
   }, [flights]);
 
-  /* ---------------- REFRESH FLIGHTS ---------------- */
+  useEffect(() => {
+    if (!flightList.length) return;
 
-  const refreshFlightSeats = useCallback(async () => {
-    try {
-      const results = await searchFlights({
-        from,
-        to,
-        departureDate:
-          departureDate ??
-          new Date().toISOString().split("T")[0],
-        travellers: 1,
-      });
-  
-      setFlightList(results);
-    } catch (error) {
-      console.error("Seat refresh failed:", error);
-    }
-  }, [from, to, departureDate]);
+    const highest = Math.max(
+      ...flightList.map((f) =>
+        Number(f.price ?? 0)
+      )
+    );
+
+    setSliderMax(highest);
+
+    setPriceLimit(highest);
+  }, [flightList]);
+
+  const refreshFlightSeats =
+    useCallback(async () => {
+      try {
+        const results = await searchFlights({
+          from,
+          to,
+          departureDate:
+            departureDate ??
+            new Date()
+              .toISOString()
+              .split("T")[0],
+          travellers: 1,
+        });
+
+        setFlightList(results);
+      } catch (err) {
+        console.error(err);
+      }
+    }, [from, to, departureDate]);
+useEffect(() => {
+  refreshFlightSeats();
+}, [refreshFlightSeats]);
+
+/* ---------------------------------------------
+   NORMALIZED DATA
+--------------------------------------------- */
 
   const normalizedFlights =
     useMemo(() => {
-
-      return flightList.map((f, i) =>
-        normalizeFlight(f, i)
+      return flightList.map((flight, index) =>
+        normalizeFlight(flight, index)
       );
-
     }, [flightList]);
 
+  const airlines = useMemo(() => {
+    return Array.from(
+      new Set(
+        normalizedFlights.map(
+          (f) => f.airline
+        )
+      )
+    ).sort();
+  }, [normalizedFlights]);
 useEffect(() => {
   console.table(
     normalizedFlights.map((f) => ({
       airline: f.airline,
       price: f.priceNumber,
-      stops: f.stops,
+      type: typeof f.priceNumber,
     }))
   );
 }, [normalizedFlights]);
 
-    const airlines = useMemo(
-      () =>
-        Array.from(new Set(normalizedFlights.map((f) => f.airline)))
-          .filter(Boolean)
-          .sort(),
-      [normalizedFlights]
-    );
+/* ---------------------------------------------
+   FILTERS
+--------------------------------------------- */
 
-    const filteredFlights = useMemo(() => {
+  const filteredFlights =
+    useMemo(() => {
       let list = [...normalizedFlights];
-    
-      if (filters.nonStop) {
-        list = list.filter(f =>
-          f.stops.toLowerCase().includes("non")
-        );
-      }
-    
-      if (filters.oneStop) {
-        list = list.filter(f =>
-          f.stops.toLowerCase().includes("1")
-        );
-      }
-    
-      if (filters.earlyMorning) {
-        list = list.filter(f => {
-          const hour = parseInt(f.dep.split(":")[0]) || 0;
-          return hour >= 0 && hour < 6;
-        });
-      }
-    
-      if (filters.morning) {
-        list = list.filter(f => {
-          const hour = parseInt(f.dep.split(":")[0]) || 0;
-          return hour >= 6 && hour < 12;
-        });
-      }
-    
-      if (filters.afternoon) {
-        list = list.filter(f => {
-          const hour = parseInt(f.dep.split(":")[0]) || 0;
-          return hour >= 12 && hour < 18;
-        });
-      }
-    
-      if (filters.evening) {
-        list = list.filter(f => {
-          const hour = parseInt(f.dep.split(":")[0]) || 0;
-          return hour >= 18;
-        });
-      }
-    
-      if (selectedAirlines.length > 0) {
-        list = list.filter(f =>
-          selectedAirlines.includes(f.airline)
-        );
-      }
-    
-      list = list.filter((f) => f.priceNumber <= priceLimit);
-    
-      return list;
-    
-    }, [
-      
-  normalizedFlights,
-  filters,
-  selectedAirlines,
-  priceLimit,
 
+      if (filters.nonStop) {
+        list = list.filter((f) =>
+          f.stops.includes("Non")
+        );
+      }
+
+      if (filters.oneStop) {
+        list = list.filter((f) =>
+          f.stops.includes("1")
+        );
+      }
+
+      if (selectedAirlines.length) {
+        list = list.filter((f) =>
+          selectedAirlines.includes(
+            f.airline
+          )
+        );
+      }
+
+      if (filters.earlyMorning) {
+        list = list.filter((f) => {
+          const hr =
+            Number(f.dep.split(":")[0]) || 0;
+          return hr < 6;
+        });
+      }
+
+      if (filters.morning) {
+        list = list.filter((f) => {
+          const hr =
+            Number(f.dep.split(":")[0]) || 0;
+          return hr >= 6 && hr < 12;
+        });
+      }
+
+      if (filters.afternoon) {
+        list = list.filter((f) => {
+          const hr =
+            Number(f.dep.split(":")[0]) || 0;
+          return hr >= 12 && hr < 18;
+        });
+      }
+
+      if (filters.evening) {
+        list = list.filter((f) => {
+          const hr =
+            Number(f.dep.split(":")[0]) || 0;
+          return hr >= 18;
+        });
+      }
+
+      list = list.filter(
+        (f) =>
+          f.priceNumber <= priceLimit
+      );
+
+      return list;
+    }, [
+      normalizedFlights,
+      filters,
+      selectedAirlines,
+      priceLimit,
     ]);
-useEffect(() => {
-  console.log(
-    `Filtered Flights: ${filteredFlights.length} / ${normalizedFlights.length}`
-  );
-}, [filteredFlights, normalizedFlights]);
+
+/* ---------------------------------------------
+   SORTING
+--------------------------------------------- */
 
   const sortedFlights =
     useMemo(() => {
-
-      const list = [
-        ...filteredFlights
-      ];
+      const list = [...filteredFlights];
 
       switch (sortBy) {
-
         case "Cheapest":
           list.sort(
             (a, b) =>
@@ -402,12 +396,16 @@ useEffect(() => {
         case "Fastest":
           list.sort(
             (a, b) =>
-              parseDuration(
-                a.duration
-              ) -
-              parseDuration(
-                b.duration
-              )
+              parseDuration(a.duration) -
+              parseDuration(b.duration)
+          );
+          break;
+
+        case "Departure Time":
+          list.sort((a, b) =>
+            a.dep.localeCompare(
+              b.dep
+            )
           );
           break;
 
@@ -418,298 +416,280 @@ useEffect(() => {
             )
           );
           break;
-
-        case "Departure Time":
-          list.sort((a, b) =>
-            a.dep.localeCompare(
-              b.dep
-            )
-          );
-        
-
-          default:
-            break;
       }
 
       return list;
-
     }, [filteredFlights, sortBy]);
-    console.log({
-  flightList,
-  normalizedFlights,
-  filteredFlights,
-  sortedFlights,
-  priceLimit,
-  sliderMax,
-});
-    if (!sortedFlights.length) {
+
+  if (!sortedFlights.length) {
+    return (
+      <div className="glass-card p-10 text-center text-white">
+        No flights found.
+      </div>
+    );
+  }
   return (
-    <div className="glass-card p-8 text-center">
-      <h3 className="text-white text-xl">
-        No flights found
-      </h3>
-
-      <p className="text-white/60 mt-2">
-        Try another date or destination.
-      </p>
-    </div>
-  );
-}
-
-return (
-  <div
-    id="results"
-      className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6"
+    <div
+      id="results"
+      className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6"
     >
+      {/* ===========================================
+          LEFT SIDEBAR
+      =========================================== */}
 
-      
-  {/* LEFT SIDEBAR */}
-
-<div
-  className="glass-card p-5 h-fit rounded-2xl lg:sticky lg:top-24"
->
-
-  <div>
-    <h3 className="text-white font-semibold text-lg">
-      Filters
-    </h3>
-
-    <p className="text-xs text-white/60">
-      Refine your flight search
-    </p>
-    
-  </div>
-
-  <button
-    onClick={() => {
-  setFilters({
-    nonStop: false,
-    oneStop: false,
-    earlyMorning: false,
-    morning: false,
-    afternoon: false,
-    evening: false,
-  });
-
-  setSelectedAirlines([]);
-
-  const highest = Math.max(
-    ...flightList.map((f) => Number(f.price ?? 0))
-  );
+      <aside className="glass-card p-5 rounded-2xl h-fit lg:sticky lg:top-24">
 
-  setSliderMax(highest);
-  setPriceLimit(highest);
-}}
-    className="text-cyan-400 text-sm hover:text-cyan-300"
-  >
-    Clear
-  </button>
-
-</div>
-
-{/* PRICE */}
-
-<div className="mb-8">
-  <h4 className="text-white font-semibold mb-4">
-    Price Range
-  </h4>
-
-  <input
-    type="range"
-    min={0}
-    max={sliderMax}
-    step={100}
-    value={priceLimit}
-    onChange={(e) =>
-      setPriceLimit(Number(e.target.value))
-    }
-    className="w-full accent-cyan-500"
-  />
-
-  <div className="flex justify-between mt-3 text-sm text-white/60">
-    <span>₹0</span>
-
-    <span>
-      ₹{priceLimit.toLocaleString("en-IN")}
-    </span>
-  </div>
-</div>
-
- 
-
-{/* STOPS */}
-
-<div className="mb-8">
-
-  <h4 className="text-white font-semibold mb-4">
-    Stops
-  </h4>
-
-  <div className="space-y-3">
-
-    <label className="flex flex-wrap items-center gap-3 text-white cursor-pointer">
-
-      <input
-        type="checkbox"
-        checked={filters.nonStop}
-        onChange={() =>
-          setFilters(prev => ({
-            ...prev,
-            nonStop: !prev.nonStop,
-          }))
-        }
-      />
-
-      Non Stop
-
-    </label>
+        {/* Header */}
 
-    <label className="flex items-center gap-3 text-white cursor-pointer">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-lg font-semibold text-white">
+              Filters
+            </h3>
+
+            <p className="text-xs text-white/60">
+              Refine your flight search
+            </p>
+          </div>
 
-      <input
-        type="checkbox"
-        checked={filters.oneStop}
-        onChange={() =>
-          setFilters(prev => ({
-            ...prev,
-            oneStop: !prev.oneStop,
-          }))
-        }
-      />
+          <button
+            onClick={() => {
+              setFilters({
+                nonStop: false,
+                oneStop: false,
 
-      1 Stop
+                earlyMorning: false,
+                morning: false,
+                afternoon: false,
+                evening: false,
+              });
 
-    </label>
+              setSelectedAirlines([]);
 
-  </div>
+              setPriceLimit(sliderMax);
+            }}
+            className="text-cyan-400 hover:text-cyan-300 text-sm"
+          >
+            Clear
+          </button>
+        </div>
 
-</div>
+        {/* PRICE */}
 
-{/* DEPARTURE */}
+        <div className="mb-8">
 
-<div className="mb-8">
+          <h4 className="font-semibold text-white mb-4">
+            Price Range
+          </h4>
+
+          <input
+            type="range"
+            min={0}
+            max={sliderMax}
+            value={priceLimit}
+            step={100}
+            onChange={(e) =>
+              setPriceLimit(Number(e.target.value))
+            }
+            className="w-full accent-cyan-500"
+          />
+
+          <div className="flex justify-between mt-3 text-sm text-white/60">
+
+            <span>₹0</span>
+
+            <span>
+              ₹{priceLimit.toLocaleString("en-IN")}
+            </span>
+
+          </div>
+
+        </div>
+
+        {/* STOPS */}
+
+        <div className="mb-8">
+
+          <h4 className="font-semibold text-white mb-4">
+            Stops
+          </h4>
+
+          <div className="space-y-3">
+
+            <label className="flex items-center gap-3 cursor-pointer text-white">
+
+              <input
+                type="checkbox"
+                checked={filters.nonStop}
+                onChange={() =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    nonStop: !prev.nonStop,
+                  }))
+                }
+              />
 
-  <h4 className="text-white font-semibold mb-4">
-    Departure Time
-  </h4>
-
-  <div className="space-y-2">
-
-    {[
-      {
-        key: "earlyMorning",
-        label: "Early Morning (00-06)"
-      },
-      {
-        key: "morning",
-        label: "Morning (06-12)"
-      },
-      {
-        key: "afternoon",
-        label: "Afternoon (12-18)"
-      },
-      {
-        key: "evening",
-        label: "Evening (18-24)"
-      },
-    ].map((item) => (
-
-      <label
-        key={item.key}
-        className="flex items-center gap-3 text-white cursor-pointer"
-      >
-
-        <input
-          type="checkbox"
-          checked={filters[item.key as keyof typeof filters]}
-          onChange={() =>
-            setFilters(prev => ({
-              ...prev,
-              [item.key]:
-                !prev[item.key as keyof typeof prev],
-            }))
-          }
-        />
-
-        {item.label}
-
-      </label>
-
-    ))}
-
-  </div>
-
-</div>
-
-{/* AIRLINES */}
-
-<div>
-
-  <h4 className="text-white font-semibold mb-4">
-    Airlines
-  </h4>
-
-  <div className="space-y-3 max-h-72 overflow-y-auto pr-2">
-
-    {airlines.map((airline) => (
-
-      <label
-        key={airline}
-        className="flex items-center gap-3 text-white cursor-pointer"
-      >
-
-        <input
-          type="checkbox"
-          checked={selectedAirlines.includes(airline)}
-          onChange={() => {
-
-            setSelectedAirlines(prev =>
-
-              prev.includes(airline)
-
-                ? prev.filter(a => a !== airline)
-
-                : [...prev, airline]
-
-            );
-
-          }}
-        />
-
-        {airline}
-
-      </label>
-
-    ))}
-
-  </div>
-
-</div>
-
-</div>
-  {/* RIGHT SECTION */}
-
-  <div>
-
-<div className="glass-card p-3 mb-6 flex gap-2 overflow-x-auto">
-
-  {SORT_OPTIONS.map((opt) => (
-    <button
-      key={opt}
-      onClick={() => setSortBy(opt)}
-      className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
-        sortBy === opt
-          ? "bg-gradient-to-r from-blue-600 to-cyan-500 text-white"
-          : "bg-white/10 text-white hover:bg-white/20"
-      }`}
-    >
-      {opt}
-    </button>
-  ))}
-
-</div>
-
-<div className="space-y-4">
+              Non Stop
+
+            </label>
+
+            <label className="flex items-center gap-3 cursor-pointer text-white">
+
+              <input
+                type="checkbox"
+                checked={filters.oneStop}
+                onChange={() =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    oneStop: !prev.oneStop,
+                  }))
+                }
+              />
+
+              1 Stop
+
+            </label>
+
+          </div>
+
+        </div>
+
+        {/* DEPARTURE */}
+
+        <div className="mb-8">
+
+          <h4 className="font-semibold text-white mb-4">
+            Departure Time
+          </h4>
+
+          <div className="space-y-3">
+
+            {[
+              {
+                key: "earlyMorning",
+                label: "Early Morning (00-06)",
+              },
+              {
+                key: "morning",
+                label: "Morning (06-12)",
+              },
+              {
+                key: "afternoon",
+                label: "Afternoon (12-18)",
+              },
+              {
+                key: "evening",
+                label: "Evening (18-24)",
+              },
+            ].map((item) => (
+
+              <label
+                key={item.key}
+                className="flex items-center gap-3 cursor-pointer text-white"
+              >
+
+                <input
+                  type="checkbox"
+                  checked={
+                    filters[
+                      item.key as keyof typeof filters
+                    ]
+                  }
+                  onChange={() =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      [item.key]:
+                        !prev[
+                          item.key as keyof typeof prev
+                        ],
+                    }))
+                  }
+                />
+
+                {item.label}
+
+              </label>
+
+            ))}
+
+          </div>
+
+        </div>
+
+        {/* AIRLINES */}
+
+        <div>
+
+          <h4 className="font-semibold text-white mb-4">
+            Airlines
+          </h4>
+
+          <div className="space-y-3 max-h-72 overflow-y-auto pr-2">
+
+            {airlines.map((airline) => (
+
+              <label
+                key={airline}
+                className="flex items-center gap-3 cursor-pointer text-white"
+              >
+
+                <input
+                  type="checkbox"
+                  checked={selectedAirlines.includes(
+                    airline
+                  )}
+                  onChange={() =>
+                    setSelectedAirlines((prev) =>
+                      prev.includes(airline)
+                        ? prev.filter(
+                            (a) => a !== airline
+                          )
+                        : [...prev, airline]
+                    )
+                  }
+                />
+
+                {airline}
+
+              </label>
+
+            ))}
+
+          </div>
+
+        </div>
+
+      </aside>
+
+      {/* ===========================================
+          RIGHT SIDE
+      =========================================== */}
+
+      <section>
+
+        {/* SORT BAR */}
+
+        <div className="glass-card p-3 mb-6 flex gap-2 overflow-x-auto">
+
+          {SORT_OPTIONS.map((option) => (
+
+            <button
+              key={option}
+              onClick={() => setSortBy(option)}
+              className={`px-4 py-2 rounded-xl whitespace-nowrap transition ${
+                sortBy === option
+                  ? "bg-gradient-to-r from-blue-600 to-cyan-500 text-white"
+                  : "bg-white/10 text-white hover:bg-white/20"
+              }`}
+            >
+              {option}
+            </button>
+
+          ))}
+
+        </div>
+
+        <div className="space-y-4">
           {sortedFlights.map((flight, i) => (
             <motion.div
               key={flight.id}
