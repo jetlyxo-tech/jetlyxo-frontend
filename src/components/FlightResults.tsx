@@ -245,6 +245,9 @@ export default function FlightResults({
       const [selectedAirlines, setSelectedAirlines] = useState<string[]>([]);
       
       const [priceLimit, setPriceLimit] = useState(0);
+useEffect(() => {
+  console.log("Price Slider:", priceLimit);
+}, [priceLimit]);
       const [sliderMax, setSliderMax] = useState(0);
 
 useEffect(() => {
@@ -293,6 +296,16 @@ useEffect(() => {
       );
 
     }, [flightList]);
+
+useEffect(() => {
+  console.table(
+    normalizedFlights.map((f) => ({
+      airline: f.airline,
+      price: f.priceNumber,
+      stops: f.stops,
+    }))
+  );
+}, [normalizedFlights]);
 
     const airlines = useMemo(
       () =>
@@ -363,6 +376,11 @@ useEffect(() => {
   priceLimit,
 
     ]);
+useEffect(() => {
+  console.log(
+    `Filtered Flights: ${filteredFlights.length} / ${normalizedFlights.length}`
+  );
+}, [filteredFlights, normalizedFlights]);
 
   const sortedFlights =
     useMemo(() => {
