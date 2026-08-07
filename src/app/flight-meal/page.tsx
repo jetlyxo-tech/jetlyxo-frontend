@@ -44,13 +44,24 @@ const pan = params.get("pan") || "";
         setLoading(true);
 
         const response = await meal({
-          dId: did,
-        });
+  dId: did,
+});
 
-        console.log("Meal Response");
-        console.log(response);
+console.log("========== RESPONSE ==========");
+console.log(response);
 
-        setMealResponse(response);
+console.log("Keys:", Object.keys(response));
+
+console.log("dtl:", response.dtl);
+
+console.log("data:", response.data);
+
+console.log(
+  "JSON:",
+  JSON.stringify(response, null, 2)
+);
+
+setMealResponse(response);
       } catch (err) {
         console.error(err);
         toast.error("Unable to load meals.");
