@@ -293,15 +293,7 @@ useEffect(() => {
       )
     ).sort();
   }, [normalizedFlights]);
-useEffect(() => {
-  console.table(
-    normalizedFlights.map((f) => ({
-      airline: f.airline,
-      price: f.priceNumber,
-      type: typeof f.priceNumber,
-    }))
-  );
-}, [normalizedFlights]);
+
 
 /* ---------------------------------------------
    FILTERS
@@ -689,27 +681,27 @@ useEffect(() => {
 
         </div>
 
-        <div className="space-y-4">
+                <div className="space-y-4">
           {sortedFlights.map((flight, i) => (
             <motion.div
               key={flight.id}
               className="
-glass-card
-p-6
-rounded-2xl
-border
-border-white/10
-hover:border-cyan-500/30
-transition-all
-duration-300
-flex
-flex-col
-lg:flex-row
-justify-between
-items-start
-lg:items-center
-gap-6
-"
+                glass-card
+                p-6
+                rounded-2xl
+                border
+                border-white/10
+                hover:border-cyan-500/30
+                transition-all
+                duration-300
+                flex
+                flex-col
+                lg:flex-row
+                justify-between
+                items-start
+                lg:items-center
+                gap-6
+              "
               initial={{
                 opacity: 0,
                 y: 10,
@@ -722,153 +714,146 @@ gap-6
                 delay: i * 0.05,
               }}
             >
+              {/* LEFT SIDE */}
               <div>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center overflow-hidden">
+                    <Image
+                      src={
+                        airlineLogos[flight.airline] ??
+                        "/airlines/default.png"
+                      }
+                      alt={flight.airline}
+                      width={36}
+                      height={36}
+                      className="object-contain"
+                    />
+                  </div>
 
+                  <div>
+                    <p className="font-semibold text-lg text-white">
+                      {flight.airline}
+                    </p>
 
-              <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center overflow-hidden">
+                    <div className="flex gap-2 mt-2">
+                      <span className="px-2 py-1 rounded-full bg-cyan-500/20 text-cyan-300 text-xs">
+                        {flight.cabin}
+                      </span>
 
-<Image
-  src={airlineLogos[flight.airline] ?? "/airlines/default.png"}
-  alt={flight.airline}
-  width={36}
-  height={36}
-  className="object-contain"
-/>
+                      <span className="px-2 py-1 rounded-full bg-white/10 text-white/70 text-xs">
+                        {flight.fareType}
+                      </span>
+                    </div>
+                  </div>
+                </div>
 
-</div>
+                <div className="flex gap-2 mt-3 flex-wrap">
+                  {flight.badge && (
+                    <span className="px-2 py-1 rounded-full bg-green-500/20 text-green-300 text-xs">
+                      {flight.badge}
+                    </span>
+                  )}
 
-  <div>
-    <p className="font-semibold text-lg text-white">
-      {flight.airline}
-    </p>
+                  {sortBy === "Cheapest" && (
+                    <span className="px-2 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs">
+                      Cheapest
+                    </span>
+                  )}
 
-    <div className="flex gap-2 mt-2">
+                  {sortBy === "Fastest" && (
+                    <span className="px-2 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs">
+                      Fastest
+                    </span>
+                  )}
+                </div>
 
-  <span className="px-2 py-1 rounded-full bg-cyan-500/20 text-cyan-300 text-xs">
-    {flight.cabin}
-  </span>
+                {/* ROUTE */}
+                <div className="flex flex-wrap items-center gap-3 mt-4">
+                  <span className="font-semibold text-white">
+                    {from}
+                  </span>
 
-  <span className="px-2 py-1 rounded-full bg-white/10 text-white/70 text-xs">
-    {flight.fareType}
-  </span>
+                  <div className="flex-1 min-w-[40px] border-t border-dashed border-cyan-500/40" />
 
-</div>
-  </div>
-</div>
-<div className="flex gap-2 mt-3 flex-wrap">
+                  <span className="text-cyan-300 text-lg">
+                    ✈
+                  </span>
 
-  {flight.badge && (
-    <span className="px-2 py-1 rounded-full bg-green-500/20 text-green-300 text-xs">
-      {flight.badge}
-    </span>
-  )}
+                  <div className="flex-1 min-w-[40px] border-t border-dashed border-cyan-500/40" />
 
-  {sortBy === "Cheapest" && (
-    <span className="px-2 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs">
-      Cheapest
-    </span>
-  )}
+                  <span className="font-semibold text-white">
+                    {to}
+                  </span>
+                </div>
 
-  {sortBy === "Fastest" && (
-    <span className="px-2 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs">
-      Fastest
-    </span>
-  )}
+                {/* TIME + DURATION */}
+                <div className="flex items-center gap-4 mt-2">
+                  <span className="text-xl font-semibold text-white">
+                    {flight.dep}
+                  </span>
 
-</div>
+                  <div className="flex-1 h-px bg-white/20" />
 
+                  <span className="text-sm text-white/60">
+                    {flight.duration}
+                  </span>
+                </div>
 
-<div className="flex flex-wrap items-center gap-3 mt-4">
+                <p className="text-sm text-white/70 mt-1">
+                  {flight.duration} • {flight.stops}
+                </p>
 
-  <span className="font-semibold text-white">
-    {from}
-  </span>
-
-  <div className="flex-1 border-t border-dashed border-cyan-500/40" />
-
-  <span className="text-cyan-300 text-lg">✈</span>
-
-  <div className="flex-1 border-t border-dashed border-cyan-500/40" />
-
-  <span className="font-semibold text-white">
-    {to}
-  </span>
-
-</div>
-
-<div className="flex items-center gap-4 mt-2">
-
-  <span className="text-xl font-semibold text-white">
-    {flight.dep}
-  </span>
-
-  <div className="flex-1 h-px bg-white/20" />
-
-  <span className="text-sm text-white/60">
-    {flight.duration}
-  </span>
-
-</div>
-
-<p className="text-sm text-white/70">
-  {flight.duration} • {flight.stops}
-</p>
-  
-<p
-  className={`text-sm mt-2 font-medium ${
-    flight.seats === 0
-      ? "text-red-400"
-      : (flight.seats ?? 99) <= 4
-      ? "text-red-300"
-      : (flight.seats ?? 99) <= 9
-      ? "text-yellow-300"
-      : "text-green-400"
-  }`}
->
-{flight.seats === 0
-  ? "Sold Out"
-  : (flight.seats ?? 99) <= 4
-  ? `Hurry! Only ${flight.seats} seats left`
-  : (flight.seats ?? 99) <= 9
-  ? `Only ${flight.seats} seats left`
-  : flight.seats != null
-  ? `${flight.seats} Seats Available`
-  : "Seats Available"}
-</p>
+                {/* SEATS */}
+                <p
+                  className={`text-sm mt-2 font-medium ${
+                    flight.seats === 0
+                      ? "text-red-400"
+                      : (flight.seats ?? 99) <= 4
+                      ? "text-red-300"
+                      : (flight.seats ?? 99) <= 9
+                      ? "text-yellow-300"
+                      : "text-green-400"
+                  }`}
+                >
+                  {flight.seats === 0
+                    ? "Sold Out"
+                    : (flight.seats ?? 99) <= 4
+                    ? `Hurry! Only ${flight.seats} seats left`
+                    : (flight.seats ?? 99) <= 9
+                    ? `Only ${flight.seats} seats left`
+                    : flight.seats != null
+                    ? `${flight.seats} Seats Available`
+                    : "Seats Available"}
+                </p>
               </div>
-  
+
+              {/* RIGHT SIDE — PRICE */}
               <div className="flex flex-col sm:items-end items-start w-full sm:w-auto gap-3">
+                <div className="w-full lg:w-auto flex flex-col items-start lg:items-end gap-1">
+                  <p className="text-xs text-white/40">
+                    Per Traveller
+                  </p>
 
-<div className="w-full lg:w-auto flex flex-col items-start lg:items-end gap-3">
-<p className="text-xs text-white/40">
-  Per Traveller
-</p>
+                  <p className="text-3xl font-bold text-white">
+                    {flight.priceDisplay}
+                  </p>
 
-<p className="text-3xl font-bold text-white">
-  {flight.priceDisplay}
-</p>
+                  <p className="text-xs text-green-300">
+                    Taxes Included
+                  </p>
+                </div>
 
-<p className="text-xs text-green-300 mt-1">
-  Taxes Included
-</p>
-
-</div>
-
-  <BookNowButton
-  priceNumber={flight.priceNumber}
-  airline={flight.airline}
-  duration={flight.duration}
-  flightId={flight.id}
-  searchId={flight.searchId}
-  tId={flight.tId}
-/>
-
-</div>
+                <BookNowButton
+                  priceNumber={flight.priceNumber}
+                  airline={flight.airline}
+                  duration={flight.duration}
+                  flightId={flight.id}
+                  searchId={flight.searchId}
+                  tId={flight.tId}
+                />
+              </div>
             </motion.div>
           ))}
-        </div>
-  
         </div>
       </section>
     </div>
