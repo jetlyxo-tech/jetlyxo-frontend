@@ -331,28 +331,14 @@ const formatted = results.map((flight: any) => ({
   </div>
 )}
 
-{selectedService && (
+{selectedService === "flights" && (
   <div id="search" className="container mx-auto px-4 py-8">
     <SearchWidget
-      service={selectedService}
+      service="flights"
       onFlightResultsAction={(results) => {
-        if (selectedService === "flights") {
-          setFlightResults(results);
-          setBusResults(null);
-          setTrainResults(null);
-        }
-
-        if (selectedService === "buses") {
-          setBusResults(results);
-          setFlightResults(null);
-          setTrainResults(null);
-        }
-
-        if (selectedService === "trains") {
-          setTrainResults(results);
-          setFlightResults(null);
-          setBusResults(null);
-        }
+        setFlightResults(results);
+        setBusResults(null);
+        setTrainResults(null);
       }}
       onScrollToResultsAction={scrollToResults}
     />
