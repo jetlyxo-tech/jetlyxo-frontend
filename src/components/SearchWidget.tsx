@@ -29,9 +29,14 @@ const TABS = [
   { id: "multi-city", label: "Multi City" },
 ] as const;
 
+type Service = "flights" | "trains" | "buses";
+
 type Props = {
+  service?: Service;
+
   onFlightResults?: (results: Flight[]) => void;
   onScrollToResults?: () => void;
+
   onFlightResultsAction?: (results: Flight[]) => void;
   onScrollToResultsAction?: () => void;
 };
@@ -53,6 +58,7 @@ const CABINS = [
 ];
 
 export default function SearchWidget({
+  service = "flights",
   onFlightResults,
   onScrollToResults,
   onFlightResultsAction,
