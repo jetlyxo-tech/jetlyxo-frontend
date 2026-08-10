@@ -501,8 +501,7 @@ const displayTotal =
       );
 
       console.log(
-        "Calculated Total:",
-        totalPrice: displayTotal,
+        "Calculated Total:"
       );
 
       /* =========================
