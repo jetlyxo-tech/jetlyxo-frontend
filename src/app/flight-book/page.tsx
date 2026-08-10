@@ -44,8 +44,15 @@ function FlightBookPageContent() {
   const pan =
     params.get("pan") || "";
 
+  /*
+   * IMPORTANT:
+   * cc = phone country code
+   * residence = passenger residence
+   *
+   * They are separate values.
+   */
   const phoneCountryCode =
-  params.get("phoneCountryCode") || "+91";
+    params.get("phoneCountryCode") || "+91";
 
   const passportNumber =
     params.get("passportNumber") || "";
@@ -82,6 +89,19 @@ function FlightBookPageContent() {
   const mealPrice =
     params.get("mealPrice") || "0";
 
+  /* =========================
+     BAGGAGE DETAILS
+  ========================= */
+
+  const baggageCode =
+    params.get("baggageCode") || "";
+
+  const baggageName =
+    params.get("baggageName") || "";
+
+  const baggagePrice =
+    params.get("baggagePrice") || "0";
+
   const [loading, setLoading] =
     useState(false);
 
@@ -96,6 +116,13 @@ function FlightBookPageContent() {
       /* =========================
          BASIC VALIDATION
       ========================= */
+
+      if (!did) {
+        toast.error(
+          "Booking Detail ID is missing."
+        );
+        return;
+      }
 
       if (!firstName.trim()) {
         toast.warning(
@@ -212,7 +239,8 @@ function FlightBookPageContent() {
         pexp =
           `${passportExpiry}T00:00:00`;
 
-        pcn = normalizedPassportCountry;
+        pcn =
+          normalizedPassportCountry;
 
         nat = residence;
       }
@@ -221,10 +249,23 @@ function FlightBookPageContent() {
          TOTAL PRICE
       ========================= */
 
+      const basePrice =
+        Number(price) || 0;
+
+      const selectedSeatPrice =
+        Number(seatPrice) || 0;
+
+      const selectedMealPrice =
+        Number(mealPrice) || 0;
+
+      const selectedBaggagePrice =
+        Number(baggagePrice) || 0;
+
       const totalPrice =
-        Number(price) +
-        Number(seatPrice || 0) +
-        Number(mealPrice || 0);
+        basePrice +
+        selectedSeatPrice +
+        selectedMealPrice +
+        selectedBaggagePrice;
 
       /* =========================
          BONTON BOOK PAYLOAD
@@ -241,9 +282,16 @@ function FlightBookPageContent() {
 
             ln: lastName.trim(),
 
+            /*
+             * Currently supporting Adult.
+             *
+             * If you later add Child/Infant,
+             * this should come from passenger form.
+             */
             pxt: "Adult",
 
-            dob: `${dob}T00:00:00`,
+            dob:
+              `${dob}T00:00:00`,
 
             /*
              * Indian:
@@ -275,6 +323,10 @@ function FlightBookPageContent() {
             ===================== */
 
             ssr: [
+              /* =====================
+                 SEAT
+              ===================== */
+
               ...(seatCode
                 ? [
                     {
@@ -290,10 +342,15 @@ function FlightBookPageContent() {
                   ]
                 : []),
 
+              /* =====================
+                 MEAL
+              ===================== */
+
               ...(mealCode
                 ? [
                     {
-                      type: "Meal",
+                      type:
+                        "Meal",
 
                       triptype:
                         "Oneway",
@@ -303,6 +360,26 @@ function FlightBookPageContent() {
                     },
                   ]
                 : []),
+
+              /*
+               * IMPORTANT:
+               *
+               * Baggage is intentionally NOT
+               * added to Bonton SSR yet.
+               *
+               * We need to confirm the exact
+               * Bonton SSR type/code structure
+               * from the Bonton SSR response.
+               *
+               * Do NOT guess:
+               *
+               * {
+               *   type: "Baggage"
+               * }
+               *
+               * until Bonton documentation/
+               * response confirms it.
+               */
             ],
           },
         ],
@@ -312,22 +389,46 @@ function FlightBookPageContent() {
         ========================= */
 
         gstad: "",
+
         gstcno: "",
+
         gstcn: "",
+
         gstno: "",
+
         gste: "",
+
         isg: false,
 
         /* =========================
            CONTACT
         ========================= */
 
-        email,
+        email:
+          email.trim().toLowerCase(),
 
-        cno: phone,
+        cno:
+          phone.trim(),
 
-        cc: phoneCountryCode,
+        /*
+         * This is the phone country code.
+         *
+         * It is NOT derived from
+         * residence.
+         */
+        cc:
+          phoneCountryCode,
 
+        /*
+         * Local calculated total.
+         *
+         * Bonton Book payload itself
+         * does not document totalPrice
+         * as a request field, so be aware
+         * that your backend may strip or
+         * ignore this field before sending
+         * to Bonton.
+         */
         totalPrice,
       };
 
@@ -348,6 +449,10 @@ function FlightBookPageContent() {
       );
 
       console.log(
+        "==============================================="
+      );
+
+      console.log(
         "Residence:",
         residence
       );
@@ -359,13 +464,56 @@ function FlightBookPageContent() {
           : "PASSPORT"
       );
 
+      console.log(
+        "Phone Country Code:",
+        phoneCountryCode
+      );
+
+      console.log(
+        "Seat:",
+        {
+          code: seatCode,
+          number: seatNumber,
+          price: selectedSeatPrice,
+        }
+      );
+
+      console.log(
+        "Meal:",
+        {
+          code: mealCode,
+          name: mealName,
+          price: selectedMealPrice,
+        }
+      );
+
+      console.log(
+        "Baggage:",
+        {
+          code: baggageCode,
+          name: baggageName,
+          price: selectedBaggagePrice,
+        }
+      );
+
+      console.log(
+        "Base Price:",
+        basePrice
+      );
+
+      console.log(
+        "Calculated Total:",
+        totalPrice
+      );
+
       /* =========================
          CREATE JETLY BOOKING
       ========================= */
 
       const booking =
         await createBooking({
-          bookingType: "FLIGHT",
+          bookingType:
+            "FLIGHT",
 
           passengerName:
             `${title} ${firstName} ${lastName}`,
@@ -380,15 +528,19 @@ function FlightBookPageContent() {
             email,
 
           /*
-           * Keep your existing booking
-           * service price.
+           * Keep your existing Jetly
+           * booking service price.
+           *
+           * The complete selected
+           * amount is available in
+           * bontonPayload.totalPrice.
            */
           totalPrice:
             Number(price),
 
           /*
-           * Bonton payload contains
-           * the actual booking total.
+           * Save the complete
+           * Bonton booking payload.
            */
           bontonPayload:
             payload,
@@ -441,9 +593,14 @@ function FlightBookPageContent() {
       return;
     }
 
-    const ok = window.confirm(
-      "You will be redirected to the secure Razorpay payment page. Your flight will be booked only after successful payment.\n\nContinue?"
-    );
+    if (loading) {
+      return;
+    }
+
+    const ok =
+      window.confirm(
+        "You will be redirected to the secure Razorpay payment page. Your flight will be booked only after successful payment.\n\nContinue?"
+      );
 
     if (!ok) {
       return;
@@ -460,6 +617,16 @@ function FlightBookPageContent() {
     residence === "IN"
       ? "PAN"
       : "Passport";
+
+  /* =========================
+     DISPLAY TOTAL
+  ========================= */
+
+  const displayTotal =
+    (Number(price) || 0) +
+    (Number(seatPrice) || 0) +
+    (Number(mealPrice) || 0) +
+    (Number(baggagePrice) || 0);
 
   /* =========================
      PAGE
@@ -491,31 +658,41 @@ function FlightBookPageContent() {
             BOOKING SUMMARY
         ===================== */}
 
-        <div className="bg-slate-800 rounded-xl p-6 space-y-4">
+        <div className="bg-slate-800 rounded-xl p-6 space-y-4 shadow-xl">
+
+          {/* PASSENGER */}
 
           <p>
             <b>Passenger:</b>{" "}
             {title} {firstName} {lastName}
           </p>
 
+          {/* AIRLINE */}
+
           <p>
             <b>Airline:</b>{" "}
             {airline}
           </p>
 
+          {/* DURATION */}
+
           <p>
             <b>Duration:</b>{" "}
-            {duration}
+            {duration || "—"}
           </p>
+
+          {/* TICKET PRICE */}
 
           <p>
             <b>Ticket Price:</b>{" "}
-            ₹{price}
+            ₹{basePrice}
           </p>
 
           <hr className="border-slate-600" />
 
-          {/* DOCUMENT */}
+          {/* =====================
+              DOCUMENT
+          ===================== */}
 
           <p>
             <b>{documentLabel}:</b>{" "}
@@ -528,7 +705,9 @@ function FlightBookPageContent() {
 
           <hr className="border-slate-600" />
 
-          {/* SEAT */}
+          {/* =====================
+              SEAT
+          ===================== */}
 
           <p>
             <b>Seat:</b>{" "}
@@ -538,12 +717,14 @@ function FlightBookPageContent() {
 
           <p>
             <b>Seat Price:</b>{" "}
-            ₹{seatPrice}
+            ₹{selectedSeatPrice}
           </p>
 
           <hr className="border-slate-600" />
 
-          {/* MEAL */}
+          {/* =====================
+              MEAL
+          ===================== */}
 
           <p>
             <b>Meal:</b>{" "}
@@ -553,24 +734,56 @@ function FlightBookPageContent() {
 
           <p>
             <b>Meal Price:</b>{" "}
-            ₹{mealPrice}
+            ₹{selectedMealPrice}
           </p>
 
           <hr className="border-slate-600" />
 
-          {/* TOTAL */}
+          {/* =====================
+              BAGGAGE
+          ===================== */}
 
-          <p className="text-lg">
+          <p>
+            <b>Baggage:</b>{" "}
+            {baggageName ||
+              "No Extra Baggage"}
+          </p>
 
-            <b>Total:</b>{" "}
+          <p>
+            <b>Baggage Price:</b>{" "}
+            ₹{selectedBaggagePrice}
+          </p>
 
-            <span className="font-bold text-green-400">
-              ₹
-              {Number(price) +
-                Number(seatPrice || 0) +
-                Number(mealPrice || 0)}
-            </span>
+          <hr className="border-slate-600" />
 
+          {/* =====================
+              TOTAL
+          ===================== */}
+
+          <div className="flex items-center justify-between">
+
+            <p className="text-lg">
+              <b>Total:</b>
+            </p>
+
+            <p className="text-2xl font-bold text-green-400">
+              ₹{displayTotal}
+            </p>
+
+          </div>
+
+        </div>
+
+        {/* =====================
+            PAYMENT INFO
+        ===================== */}
+
+        <div className="mt-6 bg-blue-950/40 border border-blue-900 rounded-xl p-4">
+
+          <p className="text-sm text-blue-200">
+            Your booking will be created first.
+            You will then be redirected to the
+            secure Razorpay payment page.
           </p>
 
         </div>
@@ -585,10 +798,21 @@ function FlightBookPageContent() {
             type="button"
             onClick={confirmBooking}
             disabled={loading}
-            className="mt-8 bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition"
+            className="
+              mt-8
+              bg-blue-600
+              hover:bg-blue-700
+              px-8
+              py-3
+              rounded-lg
+              font-semibold
+              disabled:opacity-50
+              disabled:cursor-not-allowed
+              transition
+            "
           >
             {loading
-              ? "Booking..."
+              ? "Creating Booking..."
               : "Confirm Booking"}
           </button>
 

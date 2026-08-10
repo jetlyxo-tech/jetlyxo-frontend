@@ -41,8 +41,9 @@ function FlightMealPageContent() {
 
   const pan =
     params.get("pan") || "";
+
   const phoneCountryCode =
-  params.get("phoneCountryCode") || "+91";
+    params.get("phoneCountryCode") || "+91";
 
   const passportNumber =
     params.get("passportNumber") || "";
@@ -79,8 +80,11 @@ function FlightMealPageContent() {
   const [selectedMeal, setSelectedMeal] =
     useState<any>(null);
 
+  const [selectedBaggage, setSelectedBaggage] =
+    useState<any>(null);
+
   /* =========================
-     LOAD MEALS
+     LOAD SSR
   ========================= */
 
   useEffect(() => {
@@ -93,19 +97,20 @@ function FlightMealPageContent() {
         });
 
         console.log(
-          "Bonton Meal Response:",
-          response
+          "========== BONTON SSR RESPONSE =========="
         );
+
+        console.log(response);
 
         setMealResponse(response);
       } catch (err) {
         console.error(
-          "Meal API Error:",
+          "SSR API Error:",
           err
         );
 
         toast.error(
-          "Unable to load meals."
+          "Unable to load meal/baggage options."
         );
       } finally {
         setLoading(false);
@@ -114,21 +119,71 @@ function FlightMealPageContent() {
 
     if (did) {
       loadMeals();
+    } else {
+      setLoading(false);
     }
   }, [did]);
 
   /* =========================
-     MEAL DATA
+     BONTON DATA
+     
+     IMPORTANT:
+     Bonton response is:
+     
+     response
+       └── data
+           └── dtl
+  ========================= */
+
+  const detailSections =
+    mealResponse?.data?.dtl ?? [];
+
+  console.log(
+    "Bonton SSR detail sections:",
+    detailSections
+  );
+
+  /* =========================
+     MEAL SECTION
   ========================= */
 
   const mealSection =
-    mealResponse?.dtl?.find(
+    detailSections.find(
       (item: any) =>
-        item.typ === "Meal"
+        String(item.typ).toLowerCase() ===
+        "meal"
     );
 
   const meals =
     mealSection?.mel ?? [];
+
+  /* =========================
+     BAGGAGE SECTION
+  ========================= */
+
+  const baggageSection =
+    detailSections.find(
+      (item: any) =>
+        String(item.typ).toLowerCase() ===
+        "baggage"
+    );
+
+  const baggage =
+    baggageSection?.mel ?? [];
+
+  /* =========================
+     PRICES
+  ========================= */
+
+  const selectedMealPrice =
+    Number(selectedMeal?.amt || 0);
+
+  const selectedBaggagePrice =
+    Number(selectedBaggage?.amt || 0);
+
+  const totalSSRPrice =
+    selectedMealPrice +
+    selectedBaggagePrice;
 
   /* =========================
      CONTINUE TO BOOKING
@@ -144,6 +199,10 @@ function FlightMealPageContent() {
         price,
         airline,
         duration,
+
+        /* =====================
+           PASSENGER
+        ===================== */
 
         firstName,
         lastName,
@@ -202,6 +261,28 @@ function FlightMealPageContent() {
           String(
             selectedMeal?.amt || "0"
           ),
+
+        /* =====================
+           BAGGAGE
+        ===================== */
+
+        baggageCode:
+          selectedBaggage?.code || "",
+
+        baggageName:
+          selectedBaggage?.des || "",
+
+        baggagePrice:
+          String(
+            selectedBaggage?.amt || "0"
+          ),
+
+        /* =====================
+           SSR TOTAL
+        ===================== */
+
+        ssrPrice:
+          String(totalSSRPrice),
       });
 
     router.push(
@@ -223,7 +304,7 @@ function FlightMealPageContent() {
         ===================== */}
 
         <h1 className="text-3xl font-bold mb-8">
-          Meal Selection
+          Flight Extras
         </h1>
 
         {/* =====================
@@ -240,7 +321,7 @@ function FlightMealPageContent() {
               </span>
 
               <span className="font-bold ml-2">
-                {airline}
+                {airline || "N/A"}
               </span>
             </p>
 
@@ -250,7 +331,7 @@ function FlightMealPageContent() {
               </span>
 
               <span className="font-bold ml-2">
-                {passengerName}
+                {passengerName || "N/A"}
               </span>
             </p>
 
@@ -260,7 +341,7 @@ function FlightMealPageContent() {
               </span>
 
               <span className="font-bold ml-2">
-                {duration}
+                {duration || "N/A"}
               </span>
             </p>
 
@@ -270,7 +351,7 @@ function FlightMealPageContent() {
               </span>
 
               <span className="font-bold ml-2">
-                ₹{price}
+                ₹{price || "0"}
               </span>
             </p>
 
@@ -290,7 +371,7 @@ function FlightMealPageContent() {
               </span>
 
               <span className="font-bold ml-2">
-                ₹{seatPrice}
+                ₹{seatPrice || "0"}
               </span>
             </p>
 
@@ -298,11 +379,11 @@ function FlightMealPageContent() {
 
         </div>
 
-        {/* =====================
-            MEALS
-        ===================== */}
-
         {loading ? (
+
+          /* =====================
+             LOADING
+          ===================== */
 
           <div className="flex justify-center py-20">
 
@@ -313,130 +394,266 @@ function FlightMealPageContent() {
         ) : (
 
           <>
-            {meals.length === 0 ? (
 
-              <div className="bg-slate-800 rounded-xl p-8 text-center">
+            {/* =====================
+                MEALS
+            ===================== */}
 
-                <h2 className="text-xl font-semibold mb-2">
-                  No Meals Available
-                </h2>
+            <div className="mb-10">
 
-                <p className="text-gray-400">
-                  This airline does not provide
-                  meal selection.
-                </p>
+              <h2 className="text-2xl font-bold mb-4">
+                🍱 Meals
+              </h2>
 
-              </div>
+              {meals.length === 0 ? (
 
-            ) : (
+                <div className="bg-slate-800 rounded-xl p-6">
 
-              <div className="grid md:grid-cols-2 gap-4">
+                  <p className="text-gray-400">
+                    No meal options are available
+                    for this flight.
+                  </p>
 
-                {meals.map(
-                  (item: any) => (
+                </div>
 
-                    <button
-                      key={item.code}
-                      type="button"
-                      onClick={() =>
-                        setSelectedMeal(item)
-                      }
-                      className={`
-                        p-5
-                        rounded-xl
-                        border
-                        text-left
-                        transition
+              ) : (
 
-                        ${
-                          selectedMeal?.code ===
-                          item.code
-                            ? "bg-blue-600 border-blue-300"
-                            : "bg-slate-800 border-slate-700 hover:border-blue-500"
+                <div className="grid md:grid-cols-2 gap-4">
+
+                  {meals.map(
+                    (item: any) => (
+
+                      <button
+                        key={item.code}
+                        type="button"
+                        onClick={() =>
+                          setSelectedMeal(item)
                         }
-                      `}
-                    >
+                        className={`
+                          p-5
+                          rounded-xl
+                          border
+                          text-left
+                          transition
 
-                      <div className="font-bold text-lg">
-                        {item.des}
-                      </div>
+                          ${
+                            selectedMeal?.code ===
+                            item.code
+                              ? "bg-blue-600 border-blue-300"
+                              : "bg-slate-800 border-slate-700 hover:border-blue-500"
+                          }
+                        `}
+                      >
 
-                      <div className="text-sm text-gray-300 mt-1">
-                        Code: {item.code}
-                      </div>
+                        <div className="font-bold text-lg">
+                          {item.des}
+                        </div>
 
-                      <div className="mt-3 text-xl font-bold">
-                        ₹{item.amt}
-                      </div>
+                        <div className="text-sm text-gray-400 mt-2">
+                          SSR Code
+                        </div>
 
-                    </button>
+                        <div className="text-xs text-gray-500 break-all">
+                          {item.code}
+                        </div>
 
-                  )
-                )}
+                        <div className="mt-3 text-xl font-bold">
+                          ₹{item.amt}
+                        </div>
 
-              </div>
+                      </button>
 
-            )}
+                    )
+                  )}
+
+                </div>
+
+              )}
+
+              {/* SKIP MEAL */}
+
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedMeal(null)
+                }
+                className="mt-4 bg-slate-700 px-5 py-2 rounded-lg hover:bg-slate-600"
+              >
+                Skip Meal
+              </button>
+
+            </div>
+
+            {/* =====================
+                BAGGAGE
+            ===================== */}
+
+            <div className="mb-10">
+
+              <h2 className="text-2xl font-bold mb-4">
+                🧳 Baggage
+              </h2>
+
+              {baggage.length === 0 ? (
+
+                <div className="bg-slate-800 rounded-xl p-6">
+
+                  <p className="text-gray-400">
+                    No baggage options are available
+                    for this flight.
+                  </p>
+
+                </div>
+
+              ) : (
+
+                <div className="grid md:grid-cols-2 gap-4">
+
+                  {baggage.map(
+                    (item: any) => (
+
+                      <button
+                        key={item.code}
+                        type="button"
+                        onClick={() =>
+                          setSelectedBaggage(item)
+                        }
+                        className={`
+                          p-5
+                          rounded-xl
+                          border
+                          text-left
+                          transition
+
+                          ${
+                            selectedBaggage?.code ===
+                            item.code
+                              ? "bg-blue-600 border-blue-300"
+                              : "bg-slate-800 border-slate-700 hover:border-blue-500"
+                          }
+                        `}
+                      >
+
+                        <div className="font-bold text-lg">
+                          {item.des}
+                        </div>
+
+                        <div className="text-sm text-gray-400 mt-2">
+                          SSR Code
+                        </div>
+
+                        <div className="text-xs text-gray-500 break-all">
+                          {item.code}
+                        </div>
+
+                        <div className="mt-3 text-xl font-bold">
+                          ₹{item.amt}
+                        </div>
+
+                      </button>
+
+                    )
+                  )}
+
+                </div>
+
+              )}
+
+              {/* SKIP BAGGAGE */}
+
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedBaggage(null)
+                }
+                className="mt-4 bg-slate-700 px-5 py-2 rounded-lg hover:bg-slate-600"
+              >
+                No Extra Baggage
+              </button>
+
+            </div>
 
           </>
 
         )}
 
         {/* =====================
-            SKIP MEAL
+            SELECTION SUMMARY
         ===================== */}
 
-        <div className="mt-8">
+        <div className="bg-slate-800 rounded-xl p-6 mb-8">
 
-          <button
-            type="button"
-            onClick={() =>
-              setSelectedMeal(null)
-            }
-            className="bg-slate-700 px-6 py-3 rounded-lg hover:bg-slate-600"
-          >
-            Skip Meal
-          </button>
-
-        </div>
-
-        {/* =====================
-            SELECTED MEAL
-        ===================== */}
-
-        <div className="mt-8 bg-slate-800 rounded-xl p-6 max-w-md">
-
-          <h2 className="text-xl font-bold mb-4">
-            Selected Meal
+          <h2 className="text-xl font-bold mb-5">
+            Selected Extras
           </h2>
 
-          {selectedMeal ? (
+          <div className="space-y-3">
 
-            <div className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-gray-400">
+                Seat
+              </span>
 
-              <p>
-                Meal:
-                <span className="ml-2 font-bold">
-                  {selectedMeal.des}
-                </span>
-              </p>
+              <span className="font-semibold">
+                {seatNumber || "Not Selected"}
+              </span>
+            </div>
 
-              <p>
-                Price:
-                <span className="ml-2 font-bold">
-                  ₹{selectedMeal.amt}
-                </span>
-              </p>
+            <div className="flex justify-between">
+              <span className="text-gray-400">
+                Meal
+              </span>
+
+              <span className="font-semibold">
+                {selectedMeal?.des ||
+                  "No Meal"}
+              </span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="text-gray-400">
+                Meal Price
+              </span>
+
+              <span className="font-semibold">
+                ₹{selectedMealPrice}
+              </span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="text-gray-400">
+                Baggage
+              </span>
+
+              <span className="font-semibold">
+                {selectedBaggage?.des ||
+                  "No Extra Baggage"}
+              </span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="text-gray-400">
+                Baggage Price
+              </span>
+
+              <span className="font-semibold">
+                ₹{selectedBaggagePrice}
+              </span>
+            </div>
+
+            <div className="border-t border-slate-700 pt-4 mt-4 flex justify-between">
+
+              <span className="font-bold">
+                SSR Total
+              </span>
+
+              <span className="text-xl font-bold text-blue-400">
+                ₹{totalSSRPrice}
+              </span>
 
             </div>
 
-          ) : (
-
-            <p className="text-gray-400">
-              No Meal Selected
-            </p>
-
-          )}
+          </div>
 
         </div>
 
@@ -448,7 +665,16 @@ function FlightMealPageContent() {
 
           <button
             type="button"
-            className="mt-10 bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-lg font-semibold transition"
+            className="
+              mt-4
+              bg-blue-600
+              hover:bg-blue-700
+              px-8
+              py-3
+              rounded-lg
+              font-semibold
+              transition
+            "
             onClick={handleContinue}
           >
             Continue to Booking
