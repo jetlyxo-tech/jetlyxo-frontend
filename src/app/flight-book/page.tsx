@@ -502,7 +502,7 @@ const displayTotal =
 
       console.log(
         "Calculated Total:",
-        totalPrice
+        totalPrice: displayTotal,
       );
 
       /* =========================
