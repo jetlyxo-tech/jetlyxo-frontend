@@ -246,26 +246,25 @@ function FlightBookPageContent() {
       }
 
       /* =========================
-         TOTAL PRICE
-      ========================= */
+   DISPLAY PRICES
+========================= */
 
-      const basePrice =
-        Number(price) || 0;
+const basePrice = Number(price) || 0;
 
-      const selectedSeatPrice =
-        Number(seatPrice) || 0;
+const selectedSeatPrice =
+  Number(seatPrice) || 0;
 
-      const selectedMealPrice =
-        Number(mealPrice) || 0;
+const selectedMealPrice =
+  Number(mealPrice) || 0;
 
-      const selectedBaggagePrice =
-        Number(baggagePrice) || 0;
+const selectedBaggagePrice =
+  Number(baggagePrice) || 0;
 
-      const totalPrice =
-        basePrice +
-        selectedSeatPrice +
-        selectedMealPrice +
-        selectedBaggagePrice;
+const displayTotal =
+  basePrice +
+  selectedSeatPrice +
+  selectedMealPrice +
+  selectedBaggagePrice;
 
       /* =========================
          BONTON BOOK PAYLOAD
