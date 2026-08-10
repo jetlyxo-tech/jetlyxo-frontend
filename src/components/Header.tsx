@@ -37,10 +37,12 @@ export default function Header() {
     syncAuth();
   
     window.addEventListener("storage", syncAuth);
-  
-    return () => {
-      window.removeEventListener("storage", syncAuth);
-    };
+window.addEventListener("authChanged", syncAuth);
+
+return () => {
+  window.removeEventListener("storage", syncAuth);
+  window.removeEventListener("authChanged", syncAuth);
+};
   }, [pathname, syncAuth]);
 
   useEffect(() => {

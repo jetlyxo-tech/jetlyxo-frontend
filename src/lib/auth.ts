@@ -18,22 +18,25 @@ export const getUser = () => {
 
 export const setUser = (user: any) => {
   localStorage.setItem("user", JSON.stringify(user));
+
+    if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("authChanged"));
+  }
+};
+
+export const logout = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+
+  
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("authChanged"));
+  }
 };
 
 export const isLoggedIn = (): boolean => {
   return !!getToken();
 };
 
-export const logout = () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
-};
-/*export const logout = () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
 
-  if (typeof window !== "undefined") {
-    window.location.href = "/login";
-  }
-};*/
 

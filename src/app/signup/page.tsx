@@ -5,7 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { getToken, setToken, setUser } from "@/lib/auth";
 import { toast } from "sonner";
 import { Suspense } from "react";
-function LoginPageContent() {
+
+function SignupPageContent() {
   const API_BASE =
     process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -14,8 +15,16 @@ function LoginPageContent() {
 
   const redirectPath = searchParams.get("redirect") || "/";
 
+  // ==========================================
+  // FORM STATE
+  // ==========================================
+
+  const [name, setName] = useState("");
   const [identifier, setIdentifier] = useState("");
-  const [step, setStep] = useState<"identifier" | "otp">("identifier");
+
+  const [step, setStep] = useState<"identifier" | "otp">(
+    "identifier"
+  );
 
   const [otpArray, setOtpArray] = useState([
     "",
@@ -34,15 +43,20 @@ function LoginPageContent() {
 
   const [notice, setNotice] = useState("");
 
+  // ==========================================
+  // VALIDATION
+  // ==========================================
+
   const isEmail = (value: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-  
+
   const isPhone = (value: string) =>
     /^[6-9]\d{9}$/.test(value);
 
-  /* =========================
-     CHECK TOKEN VALIDITY
-  ========================= */
+  // ==========================================
+  // CHECK TOKEN VALIDITY
+  // ==========================================
+
   useEffect(() => {
     const token = getToken();
 
@@ -65,9 +79,10 @@ function LoginPageContent() {
     }
   }, [router, redirectPath]);
 
-  /* =========================
-     SESSION EXPIRED NOTICE
-  ========================= */
+  // ==========================================
+  // SESSION EXPIRED NOTICE
+  // ==========================================
+
   useEffect(() => {
     const msg = sessionStorage.getItem("sessionExpired");
 
@@ -77,9 +92,10 @@ function LoginPageContent() {
     }
   }, []);
 
-  /* =========================
-     TIMER
-  ========================= */
+  // ==========================================
+  // OTP TIMER
+  // ==========================================
+
   useEffect(() => {
     if (timer <= 0) {
       setCanResend(true);
@@ -93,41 +109,63 @@ function LoginPageContent() {
     return () => clearInterval(interval);
   }, [timer]);
 
-  /* =========================
-     SEND OTP
-  ========================= */
+  // ==========================================
+  // SEND OTP
+  // ==========================================
+
   const sendOTP = async () => {
+    // Validate name
+    if (!name.trim()) {
+      toast.warning("Please enter your full name.");
+      return;
+    }
+
+    if (name.trim().length < 2) {
+      toast.warning("Please enter a valid name.");
+      return;
+    }
+
+    // Validate email/mobile
     if (
       !isEmail(identifier) &&
       !isPhone(identifier)
     ) {
-      toast.warning("Enter a valid email or mobile number.");
+      toast.warning(
+        "Enter a valid email or mobile number."
+      );
       return;
     }
 
     try {
       setLoading(true);
 
-      const res = await fetch(`${API_BASE}/auth/send-otp`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          identifier,
-        }),
-      });
+      const res = await fetch(
+        `${API_BASE}/auth/send-otp`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            identifier,
+            name: name.trim(),
+          }),
+        }
+      );
 
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data.message || "Failed to send OTP.");
+        toast.error(
+          data.message || "Failed to send OTP."
+        );
         return;
       }
 
       setStep("otp");
       setTimer(60);
       setCanResend(false);
+
       toast.success("OTP sent successfully.");
     } catch (error) {
       console.error(error);
@@ -137,9 +175,10 @@ function LoginPageContent() {
     }
   };
 
-  /* =========================
-     OTP INPUT
-  ========================= */
+  // ==========================================
+  // OTP INPUT
+  // ==========================================
+
   const handleOtpChange = (
     value: string,
     index: number
@@ -148,6 +187,7 @@ function LoginPageContent() {
 
     const updated = [...otpArray];
     updated[index] = value;
+
     setOtpArray(updated);
 
     if (value && index < 5) {
@@ -159,11 +199,19 @@ function LoginPageContent() {
     }
   };
 
+  // ==========================================
+  // OTP BACKSPACE
+  // ==========================================
+
   const handleKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement>,
     index: number
   ) => {
-    if (e.key === "Backspace" && !otpArray[index] && index > 0) {
+    if (
+      e.key === "Backspace" &&
+      !otpArray[index] &&
+      index > 0
+    ) {
       const prev = document.getElementById(
         `otp-${index - 1}`
       ) as HTMLInputElement | null;
@@ -171,6 +219,10 @@ function LoginPageContent() {
       prev?.focus();
     }
   };
+
+  // ==========================================
+  // OTP PASTE
+  // ==========================================
 
   const handlePaste = (
     e: React.ClipboardEvent<HTMLDivElement>
@@ -184,11 +236,16 @@ function LoginPageContent() {
 
     const filled = pasted.split("");
 
-    while (filled.length < 6) filled.push("");
+    while (filled.length < 6) {
+      filled.push("");
+    }
 
     setOtpArray(filled);
 
-    const lastIndex = Math.min(pasted.length - 1, 5);
+    const lastIndex = Math.min(
+      pasted.length - 1,
+      5
+    );
 
     const last = document.getElementById(
       `otp-${lastIndex}`
@@ -197,60 +254,92 @@ function LoginPageContent() {
     last?.focus();
   };
 
-  /* =========================
-     VERIFY OTP
-  ========================= */
+  // ==========================================
+  // VERIFY OTP
+  // ==========================================
+
   const verifyOTP = async () => {
     const finalOtp = otpArray.join("");
 
     if (finalOtp.length !== 6) {
-      toast.warning("Please enter a valid 6-digit OTP.");
+      toast.warning(
+        "Please enter a valid 6-digit OTP."
+      );
       return;
     }
 
     try {
       setVerifying(true);
 
-      const res = await fetch(`${API_BASE}/auth/verify-otp`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          identifier,
-          otp: finalOtp,
-        }),
-      });
+      const res = await fetch(
+        `${API_BASE}/auth/verify-otp`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            identifier,
+            otp: finalOtp,
+          }),
+        }
+      );
 
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data.message || "OTP verification failed.");
+        toast.error(
+          data.message ||
+            "OTP verification failed."
+        );
         return;
       }
 
       if (!data.token) {
-        toast.error("Invalid token received from server.");
+        toast.error(
+          "Invalid token received from server."
+        );
         return;
       }
 
+      // ==========================================
+      // SAVE TOKEN
+      // ==========================================
+
       setToken(data.token);
 
+      // ==========================================
+      // SAVE USER
+      // ==========================================
+
       setUser({
+        id: data.user?.id,
         email:
           data.user?.email ||
           (isEmail(identifier)
             ? identifier
             : ""),
+        phone:
+          data.user?.phone ||
+          (isPhone(identifier)
+            ? identifier
+            : ""),
         name:
           data.user?.name ||
-          (isEmail(identifier)
-            ? identifier.split("@")[0]
-            : identifier),
+          name.trim(),
       });
 
+      toast.success(
+        `Welcome, ${
+          data.user?.name || name.trim()
+        }!`
+      );
+
+      // ==========================================
+      // REDIRECT
+      // ==========================================
+
       router.replace(redirectPath);
-      //router.refresh();
     } catch (error) {
       console.error(error);
       toast.error("Verification failed.");
@@ -259,25 +348,27 @@ function LoginPageContent() {
     }
   };
 
-  /* =========================
-     UI
-  ========================= */
+  // ==========================================
+  // UI
+  // ==========================================
+
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
       <div className="w-full max-w-md bg-slate-900 border border-white/10 rounded-2xl p-6 sm:p-8 shadow-2xl">
 
         {/* HEADER */}
+
         <div className="text-center mb-6">
           <p className="text-blue-400 text-sm">
-          Welcome to JetlyXO
+            Welcome to JetlyXO
           </p>
 
           <h1 className="text-2xl sm:text-3xl font-bold text-white mt-1">
-          Create Account
+            Create Account
           </h1>
 
           <p className="text-white/60 text-sm mt-2">
-          Register using Email or Mobile number
+            Register using Email or Mobile number
           </p>
 
           {notice && (
@@ -287,17 +378,54 @@ function LoginPageContent() {
           )}
         </div>
 
-        {/* EMAIL STEP */}
+        {/* ======================================
+            IDENTIFIER STEP
+        ======================================= */}
+
         {step === "identifier" && (
           <div className="space-y-4">
-            <input
-  type="text"
-  placeholder="Enter Email or Mobile Number"
-  value={identifier}
-  onChange={(e) => setIdentifier(e.target.value.trim())}
-  className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500"
-/>
-              
+
+            {/* FULL NAME */}
+
+            <div>
+              <label className="block text-sm text-white/70 mb-2">
+                Full Name
+              </label>
+
+              <input
+                type="text"
+                placeholder="Enter your full name"
+                value={name}
+                onChange={(e) =>
+                  setName(e.target.value)
+                }
+                autoComplete="name"
+                className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/30 outline-none focus:border-blue-500"
+              />
+            </div>
+
+            {/* EMAIL / MOBILE */}
+
+            <div>
+              <label className="block text-sm text-white/70 mb-2">
+                Email or Mobile Number
+              </label>
+
+              <input
+                type="text"
+                placeholder="Enter Email or Mobile Number"
+                value={identifier}
+                onChange={(e) =>
+                  setIdentifier(
+                    e.target.value.trim()
+                  )
+                }
+                autoComplete="email"
+                className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/30 outline-none focus:border-blue-500"
+              />
+            </div>
+
+            {/* CONTINUE */}
 
             <button
               onClick={sendOTP}
@@ -311,41 +439,61 @@ function LoginPageContent() {
           </div>
         )}
 
-        {/* OTP STEP */}
+        {/* ======================================
+            OTP STEP
+        ======================================= */}
+
         {step === "otp" && (
           <div className="space-y-5">
 
-<p className="text-center text-sm text-white/70">
-  OTP sent to{" "}
-  <span className="text-white font-medium">
-    {identifier}
-  </span>
-</p>
+            <p className="text-center text-sm text-white/70">
+              OTP sent to{" "}
+              <span className="text-white font-medium">
+                {identifier}
+              </span>
+            </p>
+
+            <p className="text-center text-sm text-white/50">
+              Signing up as{" "}
+              <span className="text-white font-medium">
+                {name}
+              </span>
+            </p>
+
+            {/* OTP INPUTS */}
 
             <div
               className="flex justify-between gap-2"
               onPaste={handlePaste}
             >
-              {otpArray.map((digit, index) => (
-                <input
-                  key={index}
-                  id={`otp-${index}`}
-                  type="text"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) =>
-                    handleOtpChange(
-                      e.target.value,
-                      index
-                    )
-                  }
-                  onKeyDown={(e) =>
-                    handleKeyDown(e, index)
-                  }
-                  className="w-11 h-12 sm:w-12 sm:h-12 text-center rounded-xl bg-slate-800 border border-white/10 text-white text-lg font-semibold outline-none focus:border-blue-500"
-                />
-              ))}
+              {otpArray.map(
+                (digit, index) => (
+                  <input
+                    key={index}
+                    id={`otp-${index}`}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) =>
+                      handleOtpChange(
+                        e.target.value,
+                        index
+                      )
+                    }
+                    onKeyDown={(e) =>
+                      handleKeyDown(
+                        e,
+                        index
+                      )
+                    }
+                    className="w-11 h-12 sm:w-12 sm:h-12 text-center rounded-xl bg-slate-800 border border-white/10 text-white text-lg font-semibold outline-none focus:border-blue-500"
+                  />
+                )
+              )}
             </div>
+
+            {/* VERIFY */}
 
             <button
               onClick={verifyOTP}
@@ -353,9 +501,11 @@ function LoginPageContent() {
               className="w-full bg-green-600 hover:bg-green-700 py-3 rounded-xl text-white font-semibold disabled:opacity-60"
             >
               {verifying
-                ? "Verifying..."
-                : "Verify OTP"}
+                ? "Creating Account..."
+                : "Verify & Create Account"}
             </button>
+
+            {/* RESEND */}
 
             <div className="text-center text-sm">
               {canResend ? (
@@ -375,6 +525,8 @@ function LoginPageContent() {
               )}
             </div>
 
+            {/* CHANGE DETAILS */}
+
             <button
               onClick={() => {
                 setStep("identifier");
@@ -389,7 +541,7 @@ function LoginPageContent() {
               }}
               className="w-full border border-white/10 py-3 rounded-xl text-white/70 hover:bg-white/5"
             >
-              Change Email / Mobile
+              Change Name / Email / Mobile
             </button>
           </div>
         )}
@@ -397,7 +549,12 @@ function LoginPageContent() {
     </div>
   );
 }
-export default function LoginPage() {
+
+// ==========================================
+// PAGE
+// ==========================================
+
+export default function SignupPage() {
   return (
     <Suspense
       fallback={
@@ -406,8 +563,7 @@ export default function LoginPage() {
         </div>
       }
     >
-      <LoginPageContent />
+      <SignupPageContent />
     </Suspense>
   );
 }
-  
