@@ -428,7 +428,7 @@ const displayTotal =
          * ignore this field before sending
          * to Bonton.
          */
-        totalPrice,
+        totalPrice: displayTotal,
       };
 
       /* =========================
