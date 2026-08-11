@@ -249,6 +249,12 @@ function FlightBookPageContent() {
    DISPLAY PRICES
 ========================= */
 
+
+
+/* =========================
+DISPLAY PRICES
+========================= */
+
 const basePrice = Number(price) || 0;
 
 const selectedSeatPrice =
@@ -265,7 +271,6 @@ const displayTotal =
   selectedSeatPrice +
   selectedMealPrice +
   selectedBaggagePrice;
-
       /* =========================
          BONTON BOOK PAYLOAD
       ========================= */
@@ -683,7 +688,7 @@ const displayTotal =
 
           <p>
             <b>Ticket Price:</b>{" "}
-            ₹{basePrice}
+            ₹{Number(price) || 0}
           </p>
 
           <hr className="border-slate-600" />
@@ -715,7 +720,7 @@ const displayTotal =
 
           <p>
             <b>Seat Price:</b>{" "}
-            ₹{selectedSeatPrice}
+            ₹{Number(seatPrice) || 0}
           </p>
 
           <hr className="border-slate-600" />
@@ -726,13 +731,12 @@ const displayTotal =
 
           <p>
             <b>Meal:</b>{" "}
-            {mealName ||
-              "No Meal"}
+            ₹{Number(mealPrice) || 0}
           </p>
 
           <p>
             <b>Meal Price:</b>{" "}
-            ₹{selectedMealPrice}
+            ₹{Number(baggagePrice) || 0}
           </p>
 
           <hr className="border-slate-600" />
@@ -749,7 +753,7 @@ const displayTotal =
 
           <p>
             <b>Baggage Price:</b>{" "}
-            ₹{selectedBaggagePrice}
+            ₹{Number(baggagePrice) || 0}
           </p>
 
           <hr className="border-slate-600" />

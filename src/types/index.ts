@@ -1,3 +1,4 @@
+export * from "./amendment";
 export * from "./api";
 export * from "./booking";
 export * from "./bus";
