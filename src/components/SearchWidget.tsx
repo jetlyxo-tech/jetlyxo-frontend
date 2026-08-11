@@ -148,6 +148,7 @@ export default function SearchWidget({
         from,
         to,
         departureDate: departure,
+        returnDate: activeTab === "round-trip" ? returnDate : undefined,
         travellers,
         children: 0,
         infants: 0,

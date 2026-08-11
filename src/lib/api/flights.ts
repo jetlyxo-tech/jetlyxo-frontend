@@ -95,14 +95,17 @@ export async function searchFlights(
       "/flights/search",
       {
         origin: params.from,
-        destination: params.to,
-        departureDate: params.departureDate,
-        adults: params.travellers ?? 1,
-        children: params.children ?? 0,
-        infants: params.infants ?? 0,
-        cabin: params.cabin,
-        fareType: params.fareType,
-        tripType: params.tripType,
+  destination: params.to,
+  departureDate: params.departureDate,
+  returnDate: params.returnDate,
+
+  adults: params.travellers ?? 1,
+  children: params.children ?? 0,
+  infants: params.infants ?? 0,
+
+  cabin: params.cabin,
+  fareType: params.fareType,
+  tripType: params.tripType,
       }
     );
 
