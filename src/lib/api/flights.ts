@@ -504,22 +504,20 @@ export async function fareQuote(
     searchId: string;
     tId: string;
   }
-): Promise<FareQuoteResponse | null> {
+): Promise<any> {
   try {
-    const response =
-      await fetchFlightApi<{
-        success?: boolean;
-        data?: FareQuoteResponse;
-        message?: string;
-      }>("/flights/fare-quote", data);
-
-    return response.data ?? null;
-
-  } catch (error) {
-    console.error(
-      "Fare Quote Error:",
-      error
+    const response = await fetchFlightApi<any>(
+      "/flights/fare-quote",
+      data
     );
+
+    console.log("========== FARE QUOTE API ==========");
+    console.log("Full Fare Quote Response:", response);
+    console.log("====================================");
+
+    return response?.data ?? null;
+  } catch (error) {
+    console.error("Fare Quote Error:", error);
 
     throw new Error(
       error instanceof Error
@@ -528,6 +526,7 @@ export async function fareQuote(
     );
   }
 }
+
 
 /* =========================================================
    AMENDMENT (re-exported — see amendments.ts)

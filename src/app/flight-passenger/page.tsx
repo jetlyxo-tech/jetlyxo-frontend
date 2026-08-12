@@ -221,12 +221,22 @@ function FlightPassengerPageContent() {
         tId,
       });
 
-      console.log("Fare Quote Response:", quote);
+      console.log("========== FRONTEND FARE QUOTE ==========");
+console.log(JSON.stringify(quote, null, 2));
+console.log("dId:", quote?.dId);
+console.log("data.dId:", quote?.data?.dId);
+console.log("data.data.dId:", quote?.data?.data?.dId);
+console.log(
+  "data.data.data.dId:",
+  quote?.data?.data?.data?.dId
+);
+console.log("=========================================");
 
       const did =
         quote?.dId ??
         quote?.data?.dId ??
         quote?.data?.data?.dId ??
+        quote?.data?.data?.data?.dId ??
         "";
 
       if (!did) {
