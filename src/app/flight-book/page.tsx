@@ -326,7 +326,7 @@ const displayTotal =
                SSR
             ===================== */
 
-           ssr: [
+ssr: [
   ...(seatCode
     ? [
         {
@@ -357,7 +357,6 @@ const displayTotal =
       ]
     : []),
 ],
-
               /* =====================
                  MEAL
               ===================== */
