@@ -325,8 +325,7 @@ const displayTotal =
             /* =====================
                SSR
             ===================== */
-
-ssr: [
+ ssr: [
   ...(seatCode
     ? [
         {
@@ -357,48 +356,9 @@ ssr: [
       ]
     : []),
 ],
-              /* =====================
-                 MEAL
-              ===================== */
-
-              ...(mealCode
-                ? [
-                    {
-                      type:
-                        "Meal",
-
-                      triptype:
-                        "Oneway",
-
-                      code:
-                        mealCode,
-                    },
-                  ]
-                : []),
-
-              /*
-               * IMPORTANT:
-               *
-               * Baggage is intentionally NOT
-               * added to Bonton SSR yet.
-               *
-               * We need to confirm the exact
-               * Bonton SSR type/code structure
-               * from the Bonton SSR response.
-               *
-               * Do NOT guess:
-               *
-               * {
-               *   type: "Baggage"
-               * }
-               *
-               * until Bonton documentation/
-               * response confirms it.
-               */
-            ],
-          },
-        ],
-
+},
+],
+          
         /* =========================
            GST
         ========================= */
