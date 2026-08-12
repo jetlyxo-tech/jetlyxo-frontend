@@ -326,25 +326,37 @@ const displayTotal =
                SSR
             ===================== */
 
-            ssr: [
-              /* =====================
-                 SEAT
-              ===================== */
+           ssr: [
+  ...(seatCode
+    ? [
+        {
+          type: "SeatDynamic",
+          triptype: "Oneway",
+          code: seatCode,
+        },
+      ]
+    : []),
 
-              ...(seatCode
-                ? [
-                    {
-                      type:
-                        "SeatDynamic",
+  ...(mealCode
+    ? [
+        {
+          type: "MealDynamic",
+          triptype: "Oneway",
+          code: mealCode,
+        },
+      ]
+    : []),
 
-                      triptype:
-                        "Oneway",
-
-                      code:
-                        seatCode,
-                    },
-                  ]
-                : []),
+  ...(baggageCode
+    ? [
+        {
+          type: "Baggage",
+          triptype: "Oneway",
+          code: baggageCode,
+        },
+      ]
+    : []),
+],
 
               /* =====================
                  MEAL
@@ -512,7 +524,17 @@ const displayTotal =
       /* =========================
          CREATE JETLY BOOKING
       ========================= */
+      console.log(
+  "========== BONTON BOOKING PAYLOAD =========="
+);
 
+       console.log(
+  JSON.stringify(payload, null, 2)
+);
+
+       console.log(
+  "============================================"
+);
       const booking =
         await createBooking({
           bookingType:
