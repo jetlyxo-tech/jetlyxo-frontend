@@ -2,6 +2,7 @@ import { AxiosError } from "axios";
 import { API_URL } from "@/config/env";
 import { getToken } from "@/lib/auth";
 
+
 import apiClient from "@/lib/apiClient";
 import {
   Flight,
@@ -124,6 +125,182 @@ export async function searchFlights(
       error instanceof Error
         ? error.message
         : "Flight search failed"
+    );
+  }
+}
+
+/* =========================================================
+   SEARCH FLIGHTS WITH BONTON SEARCH CONTEXT
+========================================================= */
+
+export interface FlightSearchResponse {
+  success?: boolean;
+  fallback?: boolean;
+  provider?: string | null;
+  searchId?: string | null;
+  stid?: string | null;
+  count?: number;
+  data?: Flight[];
+}
+
+export async function searchFlightsWithMeta(
+  params: FlightSearchParams
+): Promise<FlightSearchResponse> {
+  try {
+    const response = await fetchFlightSearchApi(
+      "/flights/search",
+      {
+        origin: params.from,
+        destination: params.to,
+        departureDate: params.departureDate,
+        returnDate: params.returnDate,
+
+        adults: params.travellers ?? 1,
+        children: params.children ?? 0,
+        infants: params.infants ?? 0,
+
+        cabin: params.cabin,
+        fareType: params.fareType,
+        tripType: params.tripType,
+      }
+    );
+
+    return {
+      success: response?.success ?? false,
+      fallback: response?.fallback ?? false,
+      provider: response?.provider ?? null,
+      searchId: response?.searchId ?? null,
+      stid: response?.stid ?? null,
+      count: response?.count ?? response?.data?.length ?? 0,
+      data: response?.data ?? [],
+    };
+  } catch (error) {
+    console.error(
+      "Flight Search With Metadata Error:",
+      error
+    );
+
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : "Flight search failed"
+    );
+  }
+}
+
+/* =========================================================
+   NEXT FLIGHTS — BONTON PAGINATION / FILTERING
+========================================================= */
+
+export interface NextFlightFilters {
+  minp?: number;
+  maxp?: number;
+
+  ischp?: boolean;
+  isqck?: boolean;
+  isqckdep?: boolean;
+  isqckarr?: boolean;
+
+  isrf?: boolean;
+  isnrf?: boolean;
+  ishld?: boolean;
+
+  air?: {
+    airline_code: string;
+    airline_name: string;
+  }[];
+
+  stp?: number[];
+  rstp?: number[];
+
+  depairlst?: {
+    code: string;
+    name: string;
+  }[];
+
+  arrairlst?: {
+    code: string;
+    name: string;
+  }[];
+
+  rdepairlst?: {
+    code: string;
+    name: string;
+  }[];
+
+  rarrairlst?: {
+    code: string;
+    name: string;
+  }[];
+
+  deptm?: string[];
+  rdeptm?: string[];
+
+  arrtm?: string[];
+  rarrtm?: string[];
+
+  laydur?: string[];
+
+  airstr?: string[];
+
+  laycty?: string;
+
+  depair?: string;
+  arrair?: string;
+
+  rdepair?: string;
+  rarrair?: string;
+}
+
+export interface NextFlightPayload {
+  stid: string;
+  filters?: NextFlightFilters;
+  skip: number;
+  take: number;
+  isdom: boolean;
+  isret: boolean;
+}
+
+export interface NextFlightResponse {
+  provider?: string;
+  searchId?: string;
+  stid?: string;
+  count?: number;
+  flights?: Flight[];
+  raw?: unknown;
+}
+
+export async function nextFlights(
+  payload: NextFlightPayload
+): Promise<NextFlightResponse> {
+  try {
+    const response =
+      await fetchFlightApi<{
+        success?: boolean;
+        data?: NextFlightResponse;
+        message?: string;
+      }>(
+        "/flights/next",
+        payload
+      );
+
+    return response.data ?? {
+      provider: "BONTON",
+      searchId: "",
+      stid: payload.stid,
+      count: 0,
+      flights: [],
+    };
+  } catch (error) {
+    console.error(
+      "Next Flights Error:",
+      error
+    );
+
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : "Unable to load more flights"
     );
   }
 }

@@ -5,9 +5,9 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-
+import { nextFlights } from "@/lib/api";
 import { Flight } from "@/types";
-import { searchFlights } from "@/lib/api";
+
 import { getToken } from "@/lib/auth";
 
 /* ---------------------------------------------
@@ -227,14 +227,37 @@ export default function FlightResults({
 
   const [sliderMax, setSliderMax] =
     useState(0);
+  
+
+  const [searchStid, setSearchStid] =
+  useState<string>(
+    (flights[0] as any)?.stid ?? ""
+  );
+
+  const [nextSkip, setNextSkip] =
+  useState(flights.length);
+
+  const [loadingMore, setLoadingMore] =
+  useState(false);
+
+  const [hasMoreFlights, setHasMoreFlights] =
+  useState(true);
 
 /* ---------------------------------------------
    EFFECTS
 --------------------------------------------- */
 
   useEffect(() => {
-    setFlightList(flights);
-  }, [flights]);
+  setFlightList(flights);
+
+  const firstFlight = flights[0] as any;
+
+  setSearchStid(firstFlight?.stid ?? "");
+
+  setNextSkip(flights.length);
+
+  setHasMoreFlights(true);
+}, [flights]);
 
   useEffect(() => {
     if (!flightList.length) return;
@@ -250,28 +273,110 @@ export default function FlightResults({
     setPriceLimit(highest);
   }, [flightList]);
 
-  const refreshFlightSeats =
-    useCallback(async () => {
-      try {
-        const results = await searchFlights({
-          from,
-          to,
-          departureDate:
-            departureDate ??
-            new Date()
-              .toISOString()
-              .split("T")[0],
-          travellers: 1,
-        });
 
-        setFlightList(results);
-      } catch (err) {
-        console.error(err);
-      }
-    }, [from, to, departureDate]);
-useEffect(() => {
-  refreshFlightSeats();
-}, [refreshFlightSeats]);
+/* ---------------------------------------------
+   LOAD MORE FLIGHTS — BONTON NEXT
+--------------------------------------------- */
+
+const loadNextFlights = useCallback(async () => {
+  if (!searchStid) {
+    toast.error("Flight search session is missing");
+    return;
+  }
+
+  if (loadingMore || !hasMoreFlights) {
+    return;
+  }
+
+  try {
+    setLoadingMore(true);
+
+    console.log(
+      "========== LOADING NEXT FLIGHTS =========="
+    );
+
+    console.log({
+      stid: searchStid,
+      skip: nextSkip,
+      take: 5,
+      isdom: true,
+      isret: false,
+    });
+
+    const response = await nextFlights({
+      stid: searchStid,
+      filters: {},
+      skip: nextSkip,
+      take: 5,
+      isdom: true,
+      isret: false,
+    });
+
+    const newFlights = response.flights ?? [];
+
+    console.log(
+      "========== NEXT FLIGHTS RECEIVED =========="
+    );
+
+    console.log(
+      "Received:",
+      newFlights.length
+    );
+
+    if (!newFlights.length) {
+      setHasMoreFlights(false);
+
+      toast.info("No more flights available");
+
+      return;
+    }
+
+    setFlightList((prev) => {
+      const originalSearchId =
+         prev[0]?.searchId ?? "";
+
+      const enrichedFlights = newFlights.map(
+        (flight) => ({
+         ...flight,
+         searchId:
+           flight.searchId || originalSearchId,
+         stid:
+           (flight as any).stid ||
+            searchStid,
+    })
+  );
+
+  return [
+    ...prev,
+    ...enrichedFlights,
+  ];
+});
+
+    setNextSkip(
+      (prev) => prev + newFlights.length
+    );
+  } catch (error) {
+    console.error(
+      "Load More Flights Error:",
+      error
+    );
+
+    toast.error(
+      error instanceof Error
+        ? error.message
+        : "Unable to load more flights"
+    );
+  } finally {
+    setLoadingMore(false);
+  }
+}, [
+  searchStid,
+  nextSkip,
+  loadingMore,
+  hasMoreFlights,
+]);
+
+ 
 
 /* ---------------------------------------------
    NORMALIZED DATA
@@ -854,7 +959,24 @@ useEffect(() => {
               </div>
             </motion.div>
           ))}
-        </div>
+                </div>
+
+        {/* LOAD MORE FLIGHTS */}
+
+        {hasMoreFlights && (
+          <div className="flex justify-center mt-8">
+            <button
+              type="button"
+              onClick={loadNextFlights}
+              disabled={loadingMore}
+              className="px-8 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-semibold shadow-lg hover:scale-105 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loadingMore
+                ? "Loading flights..."
+                : "Load More Flights"}
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );
