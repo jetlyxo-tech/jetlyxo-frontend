@@ -390,33 +390,35 @@ export async function initiateAmendment(
    EXTRACT INITIATE DATA
 ========================================================= */
 
-/**
- * Converts:
- *
- * initiateResponse.data.data
- *
- * into the actual InitiateAmendmentData.
- */
 export function getInitiateAmendmentData(
-  response:
-    | InitiateAmendmentResponse
-    | null
+  response: InitiateAmendmentResponse | null
 ): InitiateAmendmentData | null {
-  if (!response?.data?.data) {
+  if (!response) {
     return null;
   }
 
-  return response.data.data;
-}
+  const raw = response as unknown as {
+    data?: {
+      data?: {
+        data?: InitiateAmendmentData;
+      };
+    };
+  };
 
-/* =========================================================
-   GET AVAILABLE AMENDMENT TYPES
-========================================================= */
+  // Actual response:
+  // response
+  //   -> data
+  //      -> data
+  //         -> data
+  //            -> segs, trv, amtyps
+
+  return raw.data?.data?.data ?? null;
+}
 
 export function getAllowedAmendmentTypes(
   response: InitiateAmendmentResponse | null
 ): string[] {
-  return response?.data?.data?.amtyps ?? [];
+  return getInitiateAmendmentData(response)?.amtyps ?? [];
 }
 
 /* =========================================================
@@ -763,7 +765,7 @@ export function buildCreateAmendmentPayload(
   }
 ): CreateAmendmentRequest | null {
   const initiateData =
-    initiateResponse?.data?.data;
+    getInitiateAmendmentData(initiateResponse);
 
   if (!initiateData) {
     return null;
