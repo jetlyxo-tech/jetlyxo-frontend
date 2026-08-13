@@ -329,7 +329,7 @@ function getInitiateEnvelope(
       typeof outerData.data === "object" &&
       !Array.isArray(outerData.data)
      ) {
-      return outerData as BontonInitiateEnvelope;
+      return outerData.data as BontonInitiateEnvelope;
 }
     /*
      * Also support an already-normalized response:
