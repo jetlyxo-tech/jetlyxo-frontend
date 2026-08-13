@@ -414,13 +414,9 @@ export function getInitiateAmendmentData(
 ========================================================= */
 
 export function getAllowedAmendmentTypes(
-  response:
-    | InitiateAmendmentResponse
-    | null
+  response: InitiateAmendmentResponse | null
 ): string[] {
-  return (
-    response?.data?.data?.amtyps ?? []
-  );
+  return response?.data?.data?.amtyps ?? [];
 }
 
 /* =========================================================
@@ -754,7 +750,7 @@ export function buildCreateAmendmentPayload(
     lastName?: string;
 
     document?: {
-      FileName?: string;
+      FileName?: string; 
       FileType?: string;
       Base64?: string;
     };
