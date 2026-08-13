@@ -206,11 +206,53 @@ export function normalizeRetrievedBooking(
     return null;
   }
 
-  if (
-    Array.isArray(payload.data) &&
-    payload.data.length > 0
-  ) {
+  // Case 1:
+  // Bonton response directly:
+  //
+  // {
+  //   success: true,
+  //   data: [
+  //     { ...booking }
+  //   ]
+  // }
+  if (Array.isArray(payload.data)) {
     return payload.data[0] ?? null;
+  }
+
+  // Case 2:
+  // Jetly backend wraps the Bonton response:
+  //
+  // {
+  //   success: true,
+  //   data: {
+  //     success: true,
+  //     message: "Success",
+  //     errorCode: null,
+  //     data: [
+  //       { ...booking }
+  //     ]
+  //   }
+  // }
+  const outerData = payload.data;
+
+  if (
+    outerData &&
+    typeof outerData === "object" &&
+    !Array.isArray(outerData) &&
+    "data" in outerData
+  ) {
+    const nestedData = (
+      outerData as {
+        data?: unknown;
+      }
+    ).data;
+
+    if (Array.isArray(nestedData)) {
+      return (
+        (nestedData[0] as RetrievedBooking | undefined) ??
+        null
+      );
+    }
   }
 
   return null;
