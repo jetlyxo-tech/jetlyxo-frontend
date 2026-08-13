@@ -401,13 +401,18 @@ export function getInitiateAmendmentData(
 
   const raw = response as unknown as {
     data?: {
-      isscc?: boolean;
-      err?: string;
-      data?: InitiateAmendmentData;
+      success?: boolean;
+      message?: string;
+      errorCode?: string | null;
+      data?: {
+        isscc?: boolean;
+        err?: string;
+        data?: InitiateAmendmentData;
+      };
     };
   };
 
-  return raw.data?.data ?? null;
+  return raw.data?.data?.data ?? null;
 }
 
 export function getAllowedAmendmentTypes(
