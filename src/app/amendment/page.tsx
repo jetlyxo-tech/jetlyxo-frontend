@@ -355,7 +355,7 @@ function getInitiateEnvelope(
     }
   }
 
-  return raw as BontonInitiateEnvelope;
+   return null;
 }
 
 function getInitiateData(
