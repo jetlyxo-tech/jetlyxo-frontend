@@ -491,16 +491,16 @@ export async function createAmendment(
 
     if (result.data?.status === false) {
       throw new Error(
-        result.data.msg ||
-          "Amendment creation failed."
-      );
-    }
+       result.data.msg ||
+        "Amendment creation failed."
+  );
+}
 
-    if (!result.data?.code) {
-      throw new Error(
+     if (!result.data?.code) {
+       throw new Error(
         "Amendment was created but no amendment ID was returned."
-      );
-    }
+  );
+}
 
     return result;
   } catch (error) {
