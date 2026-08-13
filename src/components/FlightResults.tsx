@@ -41,6 +41,7 @@ type NormalizedFlight = {
   id: string | number;
 
   airline: string;
+  airlineCode?: string;
 
   priceNumber: number;
   priceDisplay: string;
@@ -98,8 +99,9 @@ function normalizeFlight(
     id: flight.id ?? index,
 
     airline: flight.airline || "Unknown Airline",
+    airlineCode: (flight as any).airlineCode || "",
 
-    priceNumber: price,
+priceNumber: price,
 
     priceDisplay:
       price > 0
@@ -273,6 +275,79 @@ export default function FlightResults({
     setPriceLimit(highest);
   }, [flightList]);
 
+/* ---------------------------------------------
+   BONTON NEXT FILTER BUILDER
+--------------------------------------------- */
+
+const buildNextFilters = ({
+  nextSelectedAirlines = selectedAirlines,
+  nextNonStop = filters.nonStop,
+  nextOneStop = filters.oneStop,
+  nextPriceLimit = priceLimit,
+}: {
+  nextSelectedAirlines?: string[];
+  nextNonStop?: boolean;
+  nextOneStop?: boolean;
+  nextPriceLimit?: number;
+} = {}) => {
+  const nextFilters: {
+    minp?: number;
+    maxp?: number;
+    air?: {
+      airline_code: string;
+      airline_name: string;
+    }[];
+    stp?: number[];
+  } = {
+    minp: 0,
+    maxp: nextPriceLimit,
+  };
+
+  // Airline
+  if (nextSelectedAirlines.length > 0) {
+    const airlineMap = new Map<
+      string,
+      {
+        airline_code: string;
+        airline_name: string;
+      }
+    >();
+
+    normalizedFlights.forEach((flight) => {
+      if (
+        nextSelectedAirlines.includes(flight.airline) &&
+        flight.airlineCode
+      ) {
+        airlineMap.set(flight.airlineCode, {
+          airline_code: flight.airlineCode,
+          airline_name: flight.airline,
+        });
+      }
+    });
+
+    if (airlineMap.size > 0) {
+      nextFilters.air = Array.from(airlineMap.values());
+    }
+  }
+
+  // Stops
+  if (nextNonStop || nextOneStop) {
+    const stops: number[] = [];
+
+    if (nextNonStop) {
+      stops.push(0);
+    }
+
+    if (nextOneStop) {
+      stops.push(1);
+    }
+
+    nextFilters.stp = stops;
+  }
+
+  return nextFilters;
+};
+
 
 /* ---------------------------------------------
    LOAD MORE FLIGHTS — BONTON NEXT
@@ -291,23 +366,26 @@ const loadNextFlights = useCallback(async () => {
   try {
     setLoadingMore(true);
 
+    const nextFilters = buildNextFilters();
+
     console.log(
       "========== LOADING NEXT FLIGHTS =========="
     );
 
     console.log({
       stid: searchStid,
+      filters: nextFilters,
       skip: nextSkip,
-      take: 5,
+      take: 20,
       isdom: true,
       isret: false,
     });
 
     const response = await nextFlights({
       stid: searchStid,
-      filters: {},
+      filters: nextFilters,
       skip: nextSkip,
-      take: 5,
+      take: 20,
       isdom: true,
       isret: false,
     });
@@ -318,10 +396,7 @@ const loadNextFlights = useCallback(async () => {
       "========== NEXT FLIGHTS RECEIVED =========="
     );
 
-    console.log(
-      "Received:",
-      newFlights.length
-    );
+    console.log("Received:", newFlights.length);
 
     if (!newFlights.length) {
       setHasMoreFlights(false);
@@ -333,24 +408,27 @@ const loadNextFlights = useCallback(async () => {
 
     setFlightList((prev) => {
       const originalSearchId =
-         prev[0]?.searchId ?? "";
+        prev[0]?.searchId ?? "";
 
       const enrichedFlights = newFlights.map(
         (flight) => ({
-         ...flight,
-         searchId:
-           flight.searchId || originalSearchId,
-         stid:
-           (flight as any).stid ||
-            searchStid,
-    })
-  );
+          ...flight,
 
-  return [
-    ...prev,
-    ...enrichedFlights,
-  ];
-});
+          searchId:
+            flight.searchId ||
+            originalSearchId,
+
+          stid:
+            (flight as any).stid ||
+            searchStid,
+        })
+      );
+
+      return [
+        ...prev,
+        ...enrichedFlights,
+      ];
+    });
 
     setNextSkip(
       (prev) => prev + newFlights.length
@@ -374,6 +452,10 @@ const loadNextFlights = useCallback(async () => {
   nextSkip,
   loadingMore,
   hasMoreFlights,
+  selectedAirlines,
+  filters.nonStop,
+  filters.oneStop,
+  priceLimit,
 ]);
 
  
@@ -399,6 +481,96 @@ const loadNextFlights = useCallback(async () => {
     ).sort();
   }, [normalizedFlights]);
 
+
+
+
+const applyProviderFilters = useCallback(
+  async ({
+    nextSelectedAirlines = selectedAirlines,
+    nextNonStop = filters.nonStop,
+    nextOneStop = filters.oneStop,
+    nextPriceLimit = priceLimit,
+  }: {
+    nextSelectedAirlines?: string[];
+    nextNonStop?: boolean;
+    nextOneStop?: boolean;
+    nextPriceLimit?: number;
+  } = {}) => {
+    if (!searchStid) {
+      toast.error("Flight search session is missing");
+      return;
+    }
+
+    try {
+      setLoadingMore(true);
+
+      const nextFilters = buildNextFilters({
+        nextSelectedAirlines,
+        nextNonStop,
+        nextOneStop,
+        nextPriceLimit,
+      });
+
+      console.log("========== APPLY BONTON FILTERS ==========");
+      console.log({
+        stid: searchStid,
+        filters: nextFilters,
+        skip: 0,
+        take: 20,
+        isdom: true,
+        isret: false,
+      });
+
+      const response = await nextFlights({
+        stid: searchStid,
+        filters: nextFilters,
+        skip: 0,
+        take: 20,
+        isdom: true,
+        isret: false,
+      });
+
+      const newFlights = response.flights ?? [];
+
+      const enrichedFlights = newFlights.map((flight) => ({
+        ...flight,
+        stid: (flight as any).stid || searchStid,
+      }));
+
+      setFlightList(enrichedFlights);
+
+      setNextSkip(enrichedFlights.length);
+
+      setHasMoreFlights(enrichedFlights.length > 0);
+
+      console.log(
+        "========== FILTERED FLIGHTS RECEIVED ==========",
+        enrichedFlights.length
+      );
+    } catch (error) {
+      console.error(
+        "Apply Provider Filters Error:",
+        error
+      );
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Unable to apply flight filters"
+      );
+    } finally {
+      setLoadingMore(false);
+    }
+  },
+  [
+    searchStid,
+    selectedAirlines,
+    filters.nonStop,
+    filters.oneStop,
+    priceLimit,
+    normalizedFlights,
+  ]
+);
 
 /* ---------------------------------------------
    FILTERS
@@ -551,20 +723,26 @@ const loadNextFlights = useCallback(async () => {
 
           <button
             onClick={() => {
-              setFilters({
-                nonStop: false,
-                oneStop: false,
+  const resetFilters = {
+    nonStop: false,
+    oneStop: false,
+    earlyMorning: false,
+    morning: false,
+    afternoon: false,
+    evening: false,
+  };
 
-                earlyMorning: false,
-                morning: false,
-                afternoon: false,
-                evening: false,
-              });
+  setFilters(resetFilters);
+  setSelectedAirlines([]);
+  setPriceLimit(sliderMax);
 
-              setSelectedAirlines([]);
-
-              setPriceLimit(sliderMax);
-            }}
+  applyProviderFilters({
+    nextSelectedAirlines: [],
+    nextNonStop: false,
+    nextOneStop: false,
+    nextPriceLimit: sliderMax,
+  });
+}}
             className="text-cyan-400 hover:text-cyan-300 text-sm"
           >
             Clear
@@ -585,10 +763,13 @@ const loadNextFlights = useCallback(async () => {
             max={sliderMax}
             value={priceLimit}
             step={100}
-            onChange={(e) =>
-              setPriceLimit(Number(e.target.value))
-            }
-            className="w-full accent-cyan-500"
+           onChange={(e) => {
+  const value = Number(e.target.value);
+  setPriceLimit(value);
+  applyProviderFilters({
+    nextPriceLimit: value,
+  });
+}}        className="w-full accent-cyan-500"
           />
 
           <div className="flex justify-between mt-3 text-sm text-white/60">
@@ -618,12 +799,19 @@ const loadNextFlights = useCallback(async () => {
               <input
                 type="checkbox"
                 checked={filters.nonStop}
-                onChange={() =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    nonStop: !prev.nonStop,
-                  }))
-                }
+                onChange={() => {
+  const nextValue = !filters.nonStop;
+
+  setFilters((prev) => ({
+    ...prev,
+    nonStop: nextValue,
+  }));
+
+  applyProviderFilters({
+    nextNonStop: nextValue,
+    nextOneStop: filters.oneStop,
+  });
+}}
               />
 
               Non Stop
@@ -635,12 +823,20 @@ const loadNextFlights = useCallback(async () => {
               <input
                 type="checkbox"
                 checked={filters.oneStop}
-                onChange={() =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    oneStop: !prev.oneStop,
-                  }))
-                }
+                
+             onChange={() => {
+  const nextValue = !filters.oneStop;
+
+  setFilters((prev) => ({
+    ...prev,
+    oneStop: nextValue,
+  }));
+
+  applyProviderFilters({
+    nextNonStop: filters.nonStop,
+    nextOneStop: nextValue,
+  });
+}}
               />
 
               1 Stop
@@ -735,15 +931,20 @@ const loadNextFlights = useCallback(async () => {
                   checked={selectedAirlines.includes(
                     airline
                   )}
-                  onChange={() =>
-                    setSelectedAirlines((prev) =>
-                      prev.includes(airline)
-                        ? prev.filter(
-                            (a) => a !== airline
-                          )
-                        : [...prev, airline]
-                    )
-                  }
+                 onChange={() => {
+  const nextSelectedAirlines =
+    selectedAirlines.includes(airline)
+      ? selectedAirlines.filter(
+          (a) => a !== airline
+        )
+      : [...selectedAirlines, airline];
+
+  setSelectedAirlines(nextSelectedAirlines);
+
+  applyProviderFilters({
+    nextSelectedAirlines,
+  });
+}}
                 />
 
                 {airline}
