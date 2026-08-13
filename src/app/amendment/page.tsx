@@ -1112,6 +1112,11 @@ function AmendmentPageContent() {
   }
 
   const inner = getInitiateData(result);
+  console.log("========== AMENDMENT DEBUG ==========");
+console.log("RAW INITIATE RESULT:", result);
+console.log("NORMALIZED INNER:", inner);
+console.log("AMENDMENT TYPES:", inner?.amtyps);
+console.log("=====================================");
 
   if (!inner) {
     toast.error(
