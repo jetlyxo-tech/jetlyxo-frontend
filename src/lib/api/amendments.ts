@@ -365,12 +365,14 @@ export async function initiateAmendment(
       );
     }
 
-    if (result.data?.isscc === false) {
+    const initiateData =
+      getInitiateAmendmentData(result);
+
+    if (!initiateData) {
       throw new Error(
-        result.data.err ||
-          "Amendment initiation was not successful."
-      );
-    }
+       "Bonton returned an invalid amendment initiation response."
+  );
+}
 
     return result;
   } catch (error) {
@@ -399,20 +401,13 @@ export function getInitiateAmendmentData(
 
   const raw = response as unknown as {
     data?: {
-      data?: {
-        data?: InitiateAmendmentData;
-      };
+      isscc?: boolean;
+      err?: string;
+      data?: InitiateAmendmentData;
     };
   };
 
-  // Actual response:
-  // response
-  //   -> data
-  //      -> data
-  //         -> data
-  //            -> segs, trv, amtyps
-
-  return raw.data?.data?.data ?? null;
+  return raw.data?.data ?? null;
 }
 
 export function getAllowedAmendmentTypes(

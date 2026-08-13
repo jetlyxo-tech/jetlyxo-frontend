@@ -324,14 +324,13 @@ function getInitiateEnvelope(
   ) {
     const outerData = raw.data as Record<string, unknown>;
 
-    if (
+     if (
       outerData.data &&
       typeof outerData.data === "object" &&
       !Array.isArray(outerData.data)
-    ) {
+     ) {
       return outerData as BontonInitiateEnvelope;
-    }
-
+}
     /*
      * Also support an already-normalized response:
      *
@@ -1089,91 +1088,67 @@ function AmendmentPageContent() {
      INITIATE AMENDMENT
   ======================================================= */
 
-  const handleInitiateAmendment =
-    async () => {
-      if (!activeBookingCode) {
-        toast.warning(
-          "Retrieve a booking first."
-        );
-        return;
-      }
+  const handleInitiateAmendment = async () => {
+  if (!activeBookingCode) {
+    toast.warning("Retrieve a booking first.");
+    return;
+  }
 
-      setLoadingInitiate(true);
+  setLoadingInitiate(true);
+  setInitiateData(null);
+  setSelectedType("");
+  setAmendmentId("");
+  setRecord(null);
 
-      setInitiateData(null);
-      setSelectedType("");
-      setAmendmentId("");
-      setRecord(null);
+  const result = await runOperation(
+    "Initiate Amendment",
+    () => initiateAmendment(activeBookingCode)
+  );
 
-      const result =
-        await runOperation(
-          "Initiate Amendment",
-          () =>
-            initiateAmendment(
-              activeBookingCode
-            )
-        );
+  setLoadingInitiate(false);
 
-      setLoadingInitiate(false);
+  if (!result) {
+    return;
+  }
 
-      if (!result) {
-        return;
-      }
+  const inner = getInitiateData(result);
 
-      const inner =
-        getInitiateData(result);
+  if (!inner) {
+    toast.error(
+      "Bonton returned an invalid initiate response."
+    );
+    return;
+  }
 
-      if (!inner) {
-        toast.error(
-          "Bonton returned an invalid initiate response."
-        );
-        return;
-      }
+  // Check the NEW response directly
+  if (!inner.amtyps?.length) {
+    toast.warning(
+      "Bonton did not return any amendment types for this booking."
+    );
+  } else {
+    toast.success(
+      `${inner.amtyps.length} amendment options loaded.`
+    );
+  }
 
-      if (
-        availableAmendmentTypes.length === 0 &&
-        !inner.amtyps?.length
-      ) {
-        toast.error(
-          "No amendment types are available for this booking."
-        );
-      } else {
-        toast.success(
-          "Amendment options loaded."
-        );
-      }
+  const traveler = inner.trv?.[0];
+  const segment = inner.segs?.[0];
 
-      const traveler =
-        inner.trv?.[0];
+  if (segment) {
+    const retrievedDate = getSegmentDeparture(booking);
 
-      const segment =
-        inner.segs?.[0];
+    if (retrievedDate !== "-") {
+      setOldTravelDate(formatDate(retrievedDate));
+    }
+  }
 
-      if (segment) {
-        const retrievedDate =
-          getSegmentDeparture(
-            booking
-          );
+  if (traveler) {
+    setNewFirstName(traveler.fnm ?? "");
+    setNewLastName(traveler.lnm ?? "");
+  }
 
-        if (retrievedDate !== "-") {
-          setOldTravelDate(
-            formatDate(retrievedDate)
-          );
-        }
-      }
-
-      if (traveler) {
-        setNewFirstName(
-          traveler.fnm ?? ""
-        );
-
-        setNewLastName(
-          traveler.lnm ?? ""
-        );
-      }
-
-      setInitiateData(result);
-    };
+  setInitiateData(result);
+};
 
   /* =======================================================
      CREATE AMENDMENT
