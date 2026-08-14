@@ -1620,6 +1620,7 @@ console.log("=====================================");
 
         const bookingWithFlightData = jetlyBooking as typeof jetlyBooking & {
   flightData?: Array<{
+    id?: string;
     brn?: string;
   }>;
 };
@@ -1628,19 +1629,22 @@ const flightData = Array.isArray(bookingWithFlightData.flightData)
   ? bookingWithFlightData.flightData[0]
   : null;
 
-const bontonBookingCode = flightData?.brn ?? "";
+const bontonBookingCode =
+  flightData?.id ??
+  "";
 
         if (!bontonBookingCode) {
-          toast.error(
-            "Bonton booking code was not found in this booking."
-          );
-          return;
-        }
+  toast.error(
+    "Encrypted Bonton booking code was not found in this booking."
+  );
+  return;
+}
 
-        console.log(
-          "BONTON BOOKING CODE:",
-          bontonBookingCode
-        );
+    
+console.log(
+  "BONTON ENCRYPTED BOOKING CODE:",
+  bontonBookingCode
+);
 
         setBookingCodeInput(
           bontonBookingCode
