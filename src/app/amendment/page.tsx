@@ -1594,94 +1594,82 @@ await handleRefreshRecord(amendmentId);
      AUTO RETRIEVE
   ======================================================= */
 
-  useEffect(() => {
+ useEffect(() => {
   const loadBookingCode = async () => {
-    // -------------------------------------------------
-    // Case 1: Booking Success already supplied Bonton code
-    // -------------------------------------------------
-    if (initialBookingCode) {
-  setBookingCodeInput(initialBookingCode);
+    // We want bookingId -> Jetly booking -> flightData.id
+    if (!initialBookingId) {
+      console.warn("No Jetly bookingId provided.");
+      return;
+    }
 
-  setTimeout(() => {
-    void handleRetrieveBooking(initialBookingCode);
-  }, 0);
+    const id = Number(initialBookingId);
 
-  return;
-}
+    if (!Number.isInteger(id) || id <= 0) {
+      toast.error("Invalid booking ID.");
+      return;
+    }
 
-    // -------------------------------------------------
-    // Case 2: Booking Success supplied Jetly booking ID
-    // -------------------------------------------------
-    if (initialBookingId) {
-      const id = Number(initialBookingId);
+    try {
+      setLoadingJetlyBooking(true);
 
-      if (!Number.isInteger(id) || id <= 0) {
-        toast.error("Invalid booking ID.");
-        return;
-      }
+      console.log("========== LOADING JETLY BOOKING ==========");
+      console.log("Jetly Booking ID:", id);
 
-      try {
-        setLoadingJetlyBooking(true);
+const jetlyBooking = await getBookingById(id);
 
-        console.log(
-          "========== LOADING JETLY BOOKING =========="
-        );
-        console.log("Jetly Booking ID:", id);
+console.log("JETLY BOOKING:", jetlyBooking);
 
-        const jetlyBooking =
-          await getBookingById(id);
+const bookingWithFlightData =
+  jetlyBooking as typeof jetlyBooking & {
+    flightData?: Array<{
+      id?: string;
+    }>;
+  };
 
-        console.log(
-          "JETLY BOOKING:",
-          jetlyBooking
-        );
-
-        const bookingWithFlightData = jetlyBooking as typeof jetlyBooking & {
-  flightData?: Array<{
-    id?: string;
-    brn?: string;
-  }>;
-};
-
-const flightData = Array.isArray(bookingWithFlightData.flightData)
+const flightData = Array.isArray(
+  bookingWithFlightData.flightData
+)
   ? bookingWithFlightData.flightData[0]
   : null;
 
+// IMPORTANT:
+// This is the encrypted Bonton booking ID
 const bontonBookingId =
   flightData?.id ?? "";
 
 if (!bontonBookingId) {
   toast.error(
-    "Encrypted Bonton booking code was not found in this booking."
+    "Encrypted Bonton booking ID was not found in this booking."
   );
   return;
 }
 
 console.log(
-  "BONTON ENCRYPTED BOOKING CODE:",
+  "========== ENCRYPTED BONTON BOOKING ID =========="
+);
+console.log("Jetly ID:", id);
+console.log(
+  "Bonton encrypted ID:",
   bontonBookingId
 );
+console.log("================================================");
 
 setBookingCodeInput(bontonBookingId);
 
-// Automatically retrieve from Bonton
-setTimeout(() => {
-  void handleRetrieveBooking(bontonBookingId);
-}, 0);
-     
+// Pass directly; don't depend on setState finishing.
+await handleRetrieveBooking(bontonBookingId);
 
-      } catch (error) {
-        console.error(
-          "FAILED TO LOAD JETLY BOOKING:",
-          error
-        );
+    } catch (error) {
+      console.error(
+        "FAILED TO LOAD JETLY BOOKING:",
+        error
+      );
 
-        toast.error(
-          "Unable to load booking details."
-        );
-      } finally {
-        setLoadingJetlyBooking(false);
-      }
+      toast.error(
+        "Unable to load booking details."
+      );
+    } finally {
+      setLoadingJetlyBooking(false);
     }
   };
 
@@ -1689,7 +1677,7 @@ setTimeout(() => {
 
   // Initial query parameters only.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-}, []);
+}, [initialBookingId]);
 
   /* =======================================================
      DISPLAY VALUES
