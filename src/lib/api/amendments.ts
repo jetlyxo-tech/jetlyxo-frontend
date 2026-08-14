@@ -455,21 +455,15 @@ export async function createAmendment(
   data: CreateAmendmentRequest
 ): Promise<CreateAmendmentResponse | null> {
   if (!data.bid?.trim()) {
-    throw new Error(
-      "Encrypted booking ID is required."
-    );
+    throw new Error("Encrypted booking ID is required.");
   }
 
   if (!data.amtyp?.trim()) {
-    throw new Error(
-      "Amendment type is required."
-    );
+    throw new Error("Amendment type is required.");
   }
 
   if (!data.trseg?.length) {
-    throw new Error(
-      "At least one segment is required."
-    );
+    throw new Error("At least one segment is required.");
   }
 
   try {
@@ -481,6 +475,14 @@ export async function createAmendment(
     const result =
       response.data as CreateAmendmentResponse;
 
+    console.log(
+      "========== FRONTEND CREATE AMENDMENT RESPONSE =========="
+    );
+    console.log(JSON.stringify(result, null, 2));
+    console.log(
+      "========================================================="
+    );
+
     if (!result?.success) {
       throw new Error(
         result?.message ||
@@ -489,25 +491,28 @@ export async function createAmendment(
       );
     }
 
+    // IMPORTANT:
+    // Bonton can return HTTP/business success at the API level
+    // while the amendment operation itself fails.
     if (result.data?.status === false) {
       throw new Error(
-       result.data.msg ||
-        "Amendment creation failed."
-  );
-}
+        result.data.msg ||
+          "Bonton rejected the amendment."
+      );
+    }
 
-     if (!result.data?.code) {
-       throw new Error(
-        "Amendment was created but no amendment ID was returned."
-  );
-}
+    if (!result.data?.code) {
+      throw new Error(
+        "Bonton created the amendment but did not return an amendment ID."
+      );
+    }
 
     return result;
+
   } catch (error) {
     console.error(
       "Create Amendment Error:",
-      (error as AxiosError).response?.data ||
-        (error as AxiosError).message
+      error
     );
 
     throw new Error(

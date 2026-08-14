@@ -60,14 +60,23 @@ const handleBookNow = (item: any) => {
   let target = "";
 
   if (type === "flight") {
-    target =
-      `/flight-passenger?flightId=${item.id}` +
-      `&price=${item.price || 0}` +
-      `&airline=${encodeURIComponent(
-        item.airline || item.name || "Flight"
-      )}` +
-      `&duration=${encodeURIComponent(item.duration || "")}`;
-  }
+  console.log("========== BOOKING FLIGHT ==========");
+  console.log("Flight ID:", item.id);
+  console.log("Search ID:", item.searchId);
+  console.log("tId:", item.tId);
+  console.log("FULL FLIGHT:", item);
+  console.log("====================================");
+
+  target =
+    `/flight-passenger?flightId=${encodeURIComponent(item.id)}` +
+    `&searchId=${encodeURIComponent(item.searchId ?? "")}` +
+    `&tId=${encodeURIComponent(item.tId ?? "")}` +
+    `&price=${item.price || 0}` +
+    `&airline=${encodeURIComponent(
+      item.airline || item.name || "Flight"
+    )}` +
+    `&duration=${encodeURIComponent(item.duration || "")}`;
+}
 
   else if (type === "bus") {
     target =

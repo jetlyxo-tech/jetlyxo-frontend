@@ -110,11 +110,31 @@ export async function searchFlights(
       }
     );
 
-    return (
-      response?.data ??
-      response?.flights ??
-      []
-    );
+const flights: Flight[] =
+  response?.data ??
+  response?.flights ??
+  [];
+
+const searchId =
+  response?.searchId ??
+  "";
+
+const tId =
+  response?.tId ??
+  response?.stid ??
+  "";
+
+return flights.map((flight) => ({
+  ...flight,
+
+  searchId:
+    flight.searchId ||
+    searchId,
+
+  tId:
+    flight.tId ||
+    tId,
+}));
   } catch (error) {
     console.error(
       "Flight Search Error:",

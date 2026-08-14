@@ -52,11 +52,13 @@ export default function FlightsPage() {
     }
 
     router.push(
-      `/flight-passenger?flightId=${flight.id}` +
-        `&price=${encodeURIComponent(String(flight.price))}` +
-        `&airline=${encodeURIComponent(flight.airline)}` +
-        `&duration=${encodeURIComponent(flight.duration)}`
-    );
+  `/flight-passenger?flightId=${encodeURIComponent(flight.id)}` +
+    `&searchId=${encodeURIComponent(flight.searchId ?? "")}` +
+    `&tId=${encodeURIComponent(flight.tId ?? "")}` +
+    `&price=${encodeURIComponent(String(flight.price))}` +
+    `&airline=${encodeURIComponent(flight.airline)}` +
+    `&duration=${encodeURIComponent(flight.duration)}`
+);
   };
 
   return (
