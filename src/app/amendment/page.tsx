@@ -1314,20 +1314,23 @@ console.log("AMENDMENT ID:", amendmentId);
 console.log("STATUS:", amendmentStatus);
 console.log("================================================"); 
 
-      if (!amendmentId) {
-  toast.error(
-    "Amendment was created but Bonton did not return an amendment ID."
-  );
-  return;
-}
-
 if (!amendmentStatus) {
-  toast.error(
+  const errorMessage =
     typeof level2?.msg === "string"
       ? level2.msg
       : typeof level1?.msg === "string"
         ? level1.msg
-        : "Bonton rejected the amendment creation request."
+        : typeof raw.msg === "string"
+          ? raw.msg
+          : "Bonton rejected the amendment creation request.";
+
+  toast.error(errorMessage);
+  return;
+}
+
+if (!amendmentId) {
+  toast.error(
+    "Bonton accepted the amendment but did not return an amendment ID."
   );
   return;
 }
