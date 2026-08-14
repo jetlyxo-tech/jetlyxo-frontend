@@ -10,6 +10,174 @@ import {
 } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 
+function normalizeBooking(booking: any) {
+  // -----------------------------
+  // Bonton / live flight booking
+  // -----------------------------
+  if (
+    booking.bookingType === "FLIGHT" &&
+    Array.isArray(booking.flightData) &&
+    booking.flightData.length > 0
+  ) {
+    const flightData = booking.flightData[0];
+    const segment = flightData?.segs?.[0];
+
+    const seat =
+      flightData?.mbg?.find(
+        (item: any) => item.ssr_type === "SeatDynamic"
+      )?.ssr_info ?? "Not Selected";
+
+    const meal =
+      flightData?.mbg?.find(
+        (item: any) => item.ssr_type === "Meal"
+      )?.ssr_info ?? "No Meal";
+
+    return {
+      id: booking.id,
+
+      // Bonton reference
+      bookingCode: flightData?.brn ?? null,
+
+      bookingType: booking.bookingType,
+      status: booking.status,
+
+      passengerName:
+        booking.passengerName ??
+        flightData?.trv?.[0]?.name ??
+        "-",
+
+      pnr:
+        booking.pnr ??
+        flightData?.pnr ??
+        flightData?.gdsPnr ??
+        "-",
+
+      airline: segment?.airnm ?? "-",
+
+      flightNo: segment
+        ? `${segment.aircd ?? ""}-${segment.fltno ?? ""}`
+        : "-",
+
+      origin:
+        segment?.orgapc ??
+        flightData?.org ??
+        "-",
+
+      destination:
+        segment?.dstapc ??
+        flightData?.dst ??
+        "-",
+
+      originCity:
+        segment?.orgcty ??
+        "-",
+
+      destinationCity:
+        segment?.dstcty ??
+        "-",
+
+      departure:
+        segment?.dptm ??
+        null,
+
+      arrival:
+        segment?.artm ??
+        null,
+
+      seat,
+      meal,
+
+      totalPrice:
+        Number(booking.totalPrice) ||
+        Number(flightData?.prcd?.np) ||
+        0,
+
+      raw: booking,
+    };
+  }
+
+  // -----------------------------
+  // Normal DB flight
+  // -----------------------------
+  if (booking.flight) {
+    return {
+      id: booking.id,
+      bookingCode: null,
+
+      bookingType: booking.bookingType,
+      status: booking.status,
+
+      passengerName: booking.passengerName ?? "-",
+      pnr: booking.pnr ?? "-",
+
+      airline: booking.flight.airline ?? "-",
+
+      flightNo:
+        booking.flight.flightNo ?? "-",
+
+      origin:
+        booking.flight.fromCity ?? "-",
+
+      destination:
+        booking.flight.toCity ?? "-",
+
+      originCity:
+        booking.flight.fromCity ?? "-",
+
+      destinationCity:
+        booking.flight.toCity ?? "-",
+
+      departure:
+        booking.flight.departure ?? null,
+
+      arrival:
+        booking.flight.arrival ?? null,
+
+      seat: "Not Selected",
+      meal: "No Meal",
+
+      totalPrice:
+        Number(booking.totalPrice) || 0,
+
+      raw: booking,
+    };
+  }
+
+  // -----------------------------
+  // Other booking types
+  // -----------------------------
+  return {
+    id: booking.id,
+    bookingCode: null,
+
+    bookingType: booking.bookingType,
+    status: booking.status,
+
+    passengerName: booking.passengerName ?? "-",
+    pnr: booking.pnr ?? "-",
+
+    airline: "-",
+    flightNo: "-",
+
+    origin: "-",
+    destination: "-",
+
+    originCity: "-",
+    destinationCity: "-",
+
+    departure: null,
+    arrival: null,
+
+    seat: "Not Selected",
+    meal: "No Meal",
+
+    totalPrice:
+      Number(booking.totalPrice) || 0,
+
+    raw: booking,
+  };
+}
+
 export default function MyBookingsPage() {
   const router = useRouter();
 
@@ -18,143 +186,56 @@ export default function MyBookingsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = getToken();
+  const token = getToken();
 
-    if (!token) {
-      router.push("/login");
-      return;
-    }
+  if (!token) {
+    router.push("/login");
+    return;
+  }
 
-    const loadBookings = async () => {
-      let safeBookings: any[] = [];
+  const loadBookings = async () => {
+    try {
+      const data = await fetchBookings();
+
+      const rawBookings = Array.isArray(data)
+        ? data
+        : [];
+
+      const safeBookings = rawBookings.map(normalizeBooking);
+
+      setBookings(safeBookings);
 
       // -----------------------------
-      // Try backend bookings
+      // Recommendations
       // -----------------------------
       try {
-        const data = await fetchBookings();
-        safeBookings = Array.isArray(data) ? data : [];
-      } catch (err) {
-        console.log("Backend booking history unavailable.");
-      }
+        const mapped = mapBookingsForAI(rawBookings).filter(
+          (item) => item.source && item.destination
+        );
 
-      // -----------------------------
-      // Backend bookings found
-      // -----------------------------
-      if (safeBookings.length > 0) {
-        setBookings(safeBookings);
-
-        try {
-          const mapped = mapBookingsForAI(safeBookings).filter(
-            (item) => item.source && item.destination
+        if (mapped.length > 0) {
+          const recs = await fetchRecommendations(mapped as any[]);
+          setRecommendations(
+            Array.isArray(recs) ? recs : []
           );
-
-          if (mapped.length > 0) {
-            const recs = await fetchRecommendations(mapped as any[]);
-            setRecommendations(Array.isArray(recs) ? recs : []);
-          }
-        } catch (err) {
-          console.log("Recommendation fetch failed.");
         }
-
-        setLoading(false);
-        return;
-      }
-
-      // -----------------------------
-      // Fallback to latest Bonton booking
-      // -----------------------------
-      const cached = sessionStorage.getItem("bookingDetails");
-
-      console.log("SESSION:");
-      console.log(cached);
-
-      if (!cached) {
-        setBookings([]);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const parsed = JSON.parse(cached);
-
-        const booking = parsed?.data?.[0];
-
-        if (!booking) {
-          setBookings([]);
-          setLoading(false);
-          return;
-        }
-
-        const bontonBooking = {
-          id: booking.brn,
-          bookingType: "Flight",
-
-          status: booking.status ?? "Confirmed",
-
-          totalPrice: booking.prcd?.np ?? 0,
-
-          passengerName: booking.trv?.[0]?.name ?? "-",
-
-          pnr: booking.pnr ?? booking.gdsPnr ?? "-",
-
-          airline: booking.segs?.[0]?.airnm ?? "-",
-
-          flightNo: `${booking.segs?.[0]?.aircd ?? ""}-${booking.segs?.[0]?.fltno ?? ""}`,
-
-          origin: booking.segs?.[0]?.orgapc ?? "-",
-
-          destination: booking.segs?.[0]?.dstapc ?? "-",
-
-          originCity: booking.segs?.[0]?.orgcty ?? "-",
-
-          destinationCity: booking.segs?.[0]?.dstcty ?? "-",
-
-          departure: booking.segs?.[0]?.dptm,
-
-          arrival: booking.segs?.[0]?.artm,
-
-          seat:
-            booking.mbg?.find(
-              (x: any) => x.ssr_type === "SeatDynamic"
-            )?.ssr_info ?? "Not Selected",
-
-          meal:
-            booking.mbg?.find(
-              (x: any) => x.ssr_type === "Meal"
-            )?.ssr_info ?? "No Meal",
-        };
-
-        setBookings([bontonBooking]);
-    
-
-try {
-  const mappedBooking = [
-    {
-      source: bontonBooking.originCity,
-      destination: bontonBooking.destinationCity,
-      type: "flight",
-    },
-  ];
-  
-  console.log("AI Request:");
-  console.log(mappedBooking);
-  
-  const recs = await fetchRecommendations(mappedBooking as any[]);
-  setRecommendations(Array.isArray(recs) ? recs : []);
-} catch (err) {
-  console.log("Recommendation fetch failed.");
-}
       } catch (err) {
-        console.log("Failed to parse cached booking.");
-        setBookings([]);
+        console.log("Recommendation fetch failed.");
       }
+    } catch (err) {
+      console.error(
+        "Failed to load bookings:",
+        err
+      );
 
+      setBookings([]);
+    } finally {
       setLoading(false);
-    };
+    }
+  };
 
-    loadBookings();
-  }, [router]);
+  loadBookings();
+}, [router]);
 
   if (loading) {
     return (
@@ -276,12 +357,16 @@ try {
               </p>
             </div>
 
-            <button
-              onClick={() => router.push("/booking-success")}
-              className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-xl font-semibold"
-            >
-              View Ticket
-            </button>
+<button
+  onClick={() =>
+    router.push(
+      `/booking-success?bookingId=${encodeURIComponent(booking.id)}`
+    )
+  }
+  className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-xl font-semibold"
+>
+  View Ticket
+</button>
 
           </div>
         </div>
