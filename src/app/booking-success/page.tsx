@@ -398,19 +398,19 @@ const ticketUrl =
           </button>
 
           {bookingData.status === "CONFIRMED" && (
-            <button
-              onClick={() =>
-                router.push(
-                  `/amendment?bookingCode=${encodeURIComponent(
-                    bookingCode
-                  )}`
-                )
-              }
-              className="bg-orange-600 hover:bg-orange-700 py-3 rounded-xl font-semibold"
-            >
-              ✏️ Amend Booking
-            </button>
-          )}
+  <button
+    onClick={() =>
+      router.push(
+        `/amendment?bookingId=${encodeURIComponent(
+          String(bookingData.id)
+        )}`
+      )
+    }
+    className="bg-orange-600 hover:bg-orange-700 py-3 rounded-xl font-semibold"
+  >
+    ✏️ Amend Booking
+  </button>
+)}
 
         </div>
 
