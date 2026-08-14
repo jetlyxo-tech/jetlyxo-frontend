@@ -205,224 +205,216 @@ const ticketUrl =
     }
     
   return (
-    <div className="min-h-screen bg-slate-900 py-10 px-4 text-white">
+  <div className="min-h-screen bg-slate-900 py-10 px-4 text-white">
 
-      <div className="max-w-5xl mx-auto rounded-2xl overflow-hidden shadow-2xl bg-slate-800">
+    <div className="max-w-5xl mx-auto rounded-2xl overflow-hidden shadow-2xl bg-slate-800">
 
-        {/* Header */}
+      {/* Header */}
+      <div className="bg-green-600 text-center py-8">
 
-        <div className="bg-green-600 text-center py-8">
-
-          <div className="text-6xl">
-            ✅
-          </div>
-
-          <h1 className="text-4xl font-bold mt-2">
-            Booking Confirmed
-          </h1>
-
-          <p className="text-green-100 mt-2">
-            Your flight has been successfully booked.
-          </p>
-
+        <div className="text-6xl">
+          ✅
         </div>
 
-        {/* Flight Banner */}
+        <h1 className="text-4xl font-bold mt-2">
+          Booking Confirmed
+        </h1>
 
-        <div className="border-b border-slate-700 p-8">
+        <p className="text-green-100 mt-2">
+          Your flight has been successfully booked.
+        </p>
 
-          <div className="flex flex-col md:flex-row justify-between items-center">
+      </div>
 
-            <div>
+      {/* Flight Banner */}
+      <div className="border-b border-slate-700 p-8">
+
+        <div className="flex flex-col md:flex-row justify-between items-center">
+
+          <div>
 
             <h2 className="text-3xl font-bold">
-             {origin}
-  <span className="mx-4">✈</span>
-  {bookingData.segs?.[0]?.dstapc}
-</h2>
+              {origin}
+              <span className="mx-4">✈</span>
+              {destination}
+            </h2>
 
-<p className="text-gray-300 mt-2">
-  {bookingData.segs?.[0]?.orgcty} → {bookingData.segs?.[0]?.dstcty}
-</p>
+            <p className="text-gray-300 mt-2">
+              {originCity} → {destinationCity}
+            </p>
 
-<p className="text-gray-400 mt-1">
-  {airline} {flightNumber}
-</p>
+            <p className="text-gray-400 mt-1">
+              {airline} {flightNumber}
+            </p>
 
+          </div>
 
-              
+          <div className="text-right">
 
-            </div>
+            <p className="text-sm text-gray-400">
+              Booking Status
+            </p>
 
-            <div className="text-right">
-
-              <p className="text-sm text-gray-400">
-                Booking Status
-              </p>
-
-              <p className="text-2xl font-bold text-green-400">
-                {status}
-              </p>
-
-            </div>
+            <p className="text-2xl font-bold text-green-400">
+              {status}
+            </p>
 
           </div>
 
         </div>
 
-        {/* Details */}
-
-        <div className="p-8">
-
-          
-
-          <div className="grid md:grid-cols-2 gap-5">
-
-            <Card
-              title="Booking Code"
-              value={bookingCode}
-            />
-
-            <Card
-              title="PNR"
-              value={pnr}
-            />
-
-<Card
-  title="Passenger"
-  value={
-    <>
-      <div>{passenger}</div>
-
-      <div className="text-sm text-gray-300 mt-1">
-        {flightData?.trv?.[0]?.pxt}
       </div>
 
-      <div className="text-sm text-gray-300">
-        Cabin: {flightData?.trv?.[0]?.cbbg}
-      </div>
+      {/* Details */}
+      <div className="p-8">
 
-      <div className="text-sm text-gray-300">
-        Check-in: {flightData?.trv?.[0]?.chbg}
-      </div>
-    </>
-  }
-/>
+        <div className="grid md:grid-cols-2 gap-5">
 
+          <Card
+            title="Booking Code"
+            value={bookingCode}
+          />
 
-<Card
-  title="Flight"
-  value={
-    <>
-      <div>
-        {airline} {flightNumber}
-      </div>
+          <Card
+            title="PNR"
+            value={pnr}
+          />
 
-      <div className="text-sm text-gray-300 mt-1">
-        {segment?.cbcls}
-      </div>
+          <Card
+            title="Passenger"
+            value={
+              <>
+                <div>{passenger}</div>
 
-      <div className="text-sm text-gray-300">
-        {segment?.dur}
-      </div>
-    </>
-  }
-/>
+                <div className="text-sm text-gray-300 mt-1">
+                  {flightData?.trv?.[0]?.pxt}
+                </div>
 
-            <Card
-  title="Departure"
-  value={formatDate(departure)}
-/>
+                <div className="text-sm text-gray-300">
+                  Cabin: {flightData?.trv?.[0]?.cbbg}
+                </div>
 
-<Card
-  title="Arrival"
-  value={formatDate(arrival)}
-/>
+                <div className="text-sm text-gray-300">
+                  Check-in: {flightData?.trv?.[0]?.chbg}
+                </div>
+              </>
+            }
+          />
 
-            <Card
-              title="Seat"
-              value={seat}
-            />
+          <Card
+            title="Flight"
+            value={
+              <>
+                <div>
+                  {airline} {flightNumber}
+                </div>
 
-            <Card
-              title="Meal"
-              value={meal}
-            />
+                <div className="text-sm text-gray-300 mt-1">
+                  {segment?.cbcls}
+                </div>
 
-<Card
-  title="Fare Breakdown"
-  value={
-    <>
-      <div>
-        Base Fare : ₹{flightData?.prcd?.bfr ?? 0}
-      </div>
+                <div className="text-sm text-gray-300">
+                  {segment?.dur}
+                </div>
+              </>
+            }
+          />
 
-      <div>
-        Taxes : ₹{flightData?.prcd?.txf ?? 0}
-      </div>
+          <Card
+            title="Departure"
+            value={formatDate(departure)}
+          />
 
-      <hr className="my-2 border-slate-500" />
+          <Card
+            title="Arrival"
+            value={formatDate(arrival)}
+          />
 
-      <div className="font-bold">
-        Total : ₹{fare}
-      </div>
-    </>
-  }
-/>
+          <Card
+            title="Seat"
+            value={seat}
+          />
 
-            <Card
-              title="Status"
-              value={status}
-            />
+          <Card
+            title="Meal"
+            value={meal}
+          />
 
-          </div>
+          <Card
+            title="Fare Breakdown"
+            value={
+              <>
+                <div>
+                  Base Fare : ₹{flightData?.prcd?.bfr ?? 0}
+                </div>
 
-         {/* Buttons */}
+                <div>
+                  Taxes : ₹{flightData?.prcd?.txf ?? 0}
+                </div>
 
-<div className="grid md:grid-cols-4 gap-4 mt-10">
+                <hr className="my-2 border-slate-500" />
 
-  <button
-    disabled={!ticketUrl}
-    onClick={() => {
-      if (ticketUrl) {
-        window.open(ticketUrl, "_blank");
-      }
-    }}
-    className="bg-blue-600 hover:bg-blue-700 py-3 rounded-xl font-semibold disabled:opacity-50"
-  >
-    📄 Download Ticket
-  </button>
+                <div className="font-bold">
+                  Total : ₹{fare}
+                </div>
+              </>
+            }
+          />
 
-  <button
-    onClick={() => router.push("/my-bookings")}
-    className="bg-indigo-600 hover:bg-indigo-700 py-3 rounded-xl font-semibold"
-  >
-    📖 My Bookings
-  </button>
-
-  <button
-    onClick={() => router.push("/")}
-    className="bg-slate-600 hover:bg-slate-500 py-3 rounded-xl font-semibold"
-  >
-    🏠 Home
-  </button>
-
-  <button
-    onClick={() =>
-      router.push(
-        `/amendment?bookingId=${encodeURIComponent(
-          bookingData.id
-        )}`
-      )
-    }
-    className="bg-orange-600 hover:bg-orange-700 py-3 rounded-xl font-semibold"
-  >
-    ✏️ Amend Booking
-  </button>
-
-</div>
+          <Card
+            title="Status"
+            value={status}
+          />
 
         </div>
+
+        {/* Buttons */}
+        <div className="grid md:grid-cols-4 gap-4 mt-10">
+
+          <button
+            disabled={!ticketUrl}
+            onClick={() => {
+              if (ticketUrl) {
+                window.open(ticketUrl, "_blank");
+              }
+            }}
+            className="bg-blue-600 hover:bg-blue-700 py-3 rounded-xl font-semibold disabled:opacity-50"
+          >
+            📄 Download Ticket
+          </button>
+
+          <button
+            onClick={() => router.push("/my-bookings")}
+            className="bg-indigo-600 hover:bg-indigo-700 py-3 rounded-xl font-semibold"
+          >
+            📖 My Bookings
+          </button>
+
+          <button
+            onClick={() => router.push("/")}
+            className="bg-slate-600 hover:bg-slate-500 py-3 rounded-xl font-semibold"
+          >
+            🏠 Home
+          </button>
+
+          {bookingData.status === "CONFIRMED" && (
+            <button
+              onClick={() =>
+                router.push(
+                  `/amendment?bookingCode=${encodeURIComponent(
+                    bookingCode
+                  )}`
+                )
+              }
+              className="bg-orange-600 hover:bg-orange-700 py-3 rounded-xl font-semibold"
+            >
+              ✏️ Amend Booking
+            </button>
+          )}
+
+        </div>
+
+             </div>
 
       </div>
 
