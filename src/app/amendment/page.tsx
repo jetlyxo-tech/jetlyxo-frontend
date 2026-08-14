@@ -1264,7 +1264,7 @@ console.log("==============================================");
        */
 
 
-const amendmentId = getAmendmentId(result);
+const amendmentId = result?.data?.code;
 
 console.log(
   "========== CREATE AMENDMENT RESPONSE =========="
