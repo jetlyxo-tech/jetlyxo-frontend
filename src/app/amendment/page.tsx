@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 
 import { API_URL } from "@/config/env";
+import { getBookingById } from "@/lib/api";
 
 import {
   acceptAmendment,
@@ -768,7 +769,10 @@ function AmendmentPageContent() {
   const searchParams = useSearchParams();
 
   const initialBookingCode =
-    searchParams.get("bookingCode") ?? "";
+  searchParams.get("bookingCode") ?? "";
+
+  const initialBookingId =
+  searchParams.get("bookingId") ?? "";
 
   /* -------------------------------------------------------
      BOOKING
@@ -776,7 +780,9 @@ function AmendmentPageContent() {
 
   const [bookingCodeInput, setBookingCodeInput] =
     useState(initialBookingCode);
-
+  
+  const [loadingJetlyBooking, setLoadingJetlyBooking] =
+    useState(false);
   const [activeBookingCode, setActiveBookingCode] =
     useState("");
 
@@ -945,6 +951,7 @@ function AmendmentPageContent() {
   ------------------------------------------------------- */
 
   const isBusy =
+    loadingJetlyBooking ||
     loadingRetrieve ||
     loadingInitiate ||
     creating ||
@@ -1026,10 +1033,11 @@ function AmendmentPageContent() {
      RETRIEVE BOOKING
   ======================================================= */
 
-  const handleRetrieveBooking = useCallback(
-    async () => {
-      const code =
-        bookingCodeInput.trim();
+ const handleRetrieveBooking = useCallback(
+  async (codeOverride?: string) => {
+    const code =
+      codeOverride?.trim() ||
+      bookingCodeInput.trim();
 
       if (!code) {
         toast.warning(
@@ -1569,19 +1577,102 @@ console.log("=====================================");
   ======================================================= */
 
   useEffect(() => {
-    if (!initialBookingCode) {
-      return;
+  const loadBookingCode = async () => {
+    // -------------------------------------------------
+    // Case 1: Booking Success already supplied Bonton code
+    // -------------------------------------------------
+    if (initialBookingCode) {
+  setBookingCodeInput(initialBookingCode);
+
+  setTimeout(() => {
+    void handleRetrieveBooking(initialBookingCode);
+  }, 0);
+
+  return;
+}
+
+    // -------------------------------------------------
+    // Case 2: Booking Success supplied Jetly booking ID
+    // -------------------------------------------------
+    if (initialBookingId) {
+      const id = Number(initialBookingId);
+
+      if (!Number.isInteger(id) || id <= 0) {
+        toast.error("Invalid booking ID.");
+        return;
+      }
+
+      try {
+        setLoadingJetlyBooking(true);
+
+        console.log(
+          "========== LOADING JETLY BOOKING =========="
+        );
+        console.log("Jetly Booking ID:", id);
+
+        const jetlyBooking =
+          await getBookingById(id);
+
+        console.log(
+          "JETLY BOOKING:",
+          jetlyBooking
+        );
+
+        const bookingWithFlightData = jetlyBooking as typeof jetlyBooking & {
+  flightData?: Array<{
+    brn?: string;
+  }>;
+};
+
+const flightData = Array.isArray(bookingWithFlightData.flightData)
+  ? bookingWithFlightData.flightData[0]
+  : null;
+
+const bontonBookingCode = flightData?.brn ?? "";
+
+        if (!bontonBookingCode) {
+          toast.error(
+            "Bonton booking code was not found in this booking."
+          );
+          return;
+        }
+
+        console.log(
+          "BONTON BOOKING CODE:",
+          bontonBookingCode
+        );
+
+        setBookingCodeInput(
+          bontonBookingCode
+        );
+
+        // Automatically retrieve from Bonton
+        setTimeout(() => {
+          void handleRetrieveBooking(
+            bontonBookingCode
+          );
+        }, 0);
+
+      } catch (error) {
+        console.error(
+          "FAILED TO LOAD JETLY BOOKING:",
+          error
+        );
+
+        toast.error(
+          "Unable to load booking details."
+        );
+      } finally {
+        setLoadingJetlyBooking(false);
+      }
     }
+  };
 
-    setBookingCodeInput(
-      initialBookingCode
-    );
+  void loadBookingCode();
 
-    void handleRetrieveBooking();
-
-    // Initial query parameter only.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Initial query parameters only.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
   /* =======================================================
      DISPLAY VALUES
