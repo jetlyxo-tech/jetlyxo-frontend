@@ -4,9 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   fetchBookings,
-  fetchRecommendations,
-  mapBookingsForAI,
-  type Recommendation,
 } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 
@@ -182,7 +179,7 @@ export default function MyBookingsPage() {
   const router = useRouter();
 
   const [bookings, setBookings] = useState<any[]>([]);
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -202,13 +199,14 @@ export default function MyBookingsPage() {
         : [];
 
       const safeBookings = rawBookings.map(normalizeBooking);
+      console.log("NORMALIZED BOOKINGS:", safeBookings);
 
       setBookings(safeBookings);
 
       // -----------------------------
       // Recommendations
       // -----------------------------
-      try {
+      /*try {
         const mapped = mapBookingsForAI(rawBookings).filter(
           (item) => item.source && item.destination
         );
@@ -221,7 +219,8 @@ export default function MyBookingsPage() {
         }
       } catch (err) {
         console.log("Recommendation fetch failed.");
-      }
+      } */
+    setRecommendations([]);
     } catch (err) {
       console.error(
         "Failed to load bookings:",
