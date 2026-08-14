@@ -1245,7 +1245,12 @@ console.log("=====================================");
 
       payload.agrmk = remark;
 
+ console.log("========== CREATE AMENDMENT PAYLOAD ==========");
+console.log(JSON.stringify(payload, null, 2));
+console.log("==============================================");
+
       setCreating(true);
+  
 
       const result =
         await runOperation(
