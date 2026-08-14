@@ -173,18 +173,19 @@ function formatDate(value?: string | null): string {
 }
 
 function formatCurrency(
-  amount?: number,
+  value: number | null | undefined,
   currency = "INR"
-): string {
-  if (amount === undefined || amount === null) {
-    return "-";
-  }
+) {
+  const safeCurrency =
+    typeof currency === "string" &&
+    currency.trim()
+      ? currency.trim()
+      : "INR";
 
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(amount);
+    currency: safeCurrency,
+  }).format(value ?? 0);
 }
 
 function getPassengerName(
