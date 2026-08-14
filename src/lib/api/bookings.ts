@@ -47,6 +47,10 @@ export async function fetchBookings(): Promise<Booking[]> {
   try {
     const response = await apiClient.get("/bookings/history");
 
+    console.log("========== BOOKING HISTORY ==========");
+    console.log(JSON.stringify(response.data, null, 2));
+    console.log("=====================================");
+
     return (
       response.data?.data ??
       response.data ??
