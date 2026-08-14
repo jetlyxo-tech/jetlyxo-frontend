@@ -1647,33 +1647,28 @@ const flightData = Array.isArray(bookingWithFlightData.flightData)
   ? bookingWithFlightData.flightData[0]
   : null;
 
-const bontonBookingCode =
-  flightData?.id ??
-  "";
+const bontonBookingId =
+  flightData?.id ?? "";
 
-        if (!bontonBookingCode) {
+if (!bontonBookingId) {
   toast.error(
     "Encrypted Bonton booking code was not found in this booking."
   );
   return;
 }
 
-    
 console.log(
   "BONTON ENCRYPTED BOOKING CODE:",
-  bontonBookingCode
+  bontonBookingId
 );
 
-        setBookingCodeInput(
-          bontonBookingCode
-        );
+setBookingCodeInput(bontonBookingId);
 
-        // Automatically retrieve from Bonton
-        setTimeout(() => {
-          void handleRetrieveBooking(
-            bontonBookingCode
-          );
-        }, 0);
+// Automatically retrieve from Bonton
+setTimeout(() => {
+  void handleRetrieveBooking(bontonBookingId);
+}, 0);
+     
 
       } catch (error) {
         console.error(
