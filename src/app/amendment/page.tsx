@@ -34,6 +34,7 @@ import {
   cancelAmendment,
   createAmendment,
   getAmendmentErrorMessage,
+  getAmendmentId,
   getHttpStatus,
   initiateAmendment,
   retrieveAmendmentBooking,
@@ -130,20 +131,7 @@ const isLiveApi =
   Boolean(process.env.NEXT_PUBLIC_API_URL) &&
   !API_URL.includes("localhost");
 
-const AMENDMENT_TYPES = [
-  "Cancellation Quotation",
-  "Instant Cancellation",
-  "Full Refund",
-  "Reissue Quotation",
-  "No Show",
-  "Void",
-  "Correction Quotation",
-  "Wheel Chair Request",
-  "Meal Quotation(SSR)",
-  "Baggage Quotation(SSR)",
-  "Miscellaneous Quotation - SSR",
-  "Miscellaneous Quotation - Refund",
-];
+
 
 /* =========================================================
    HELPERS
@@ -1275,56 +1263,22 @@ console.log("==============================================");
        * }
        */
 
-      const raw =
-  result as unknown as Record<string, any>;
 
-const level1 =
-  raw.data &&
-  typeof raw.data === "object"
-    ? raw.data
-    : null;
+const amendmentId = getAmendmentId(result);
 
-const level2 =
-  level1?.data &&
-  typeof level1.data === "object"
-    ? level1.data
-    : null;
-
-const amendmentId =
-  (typeof raw.code === "string"
-    ? raw.code
-    : undefined) ??
-  (typeof level1?.code === "string"
-    ? level1.code
-    : undefined) ??
-  (typeof level2?.code === "string"
-    ? level2.code
-    : undefined);
-
-const amendmentStatus =
-  raw.status === true ||
-  level1?.status === true ||
-  level2?.status === true;
-
-console.log("========== CREATE AMENDMENT RESPONSE ==========");
-console.log("RAW:", raw);
-console.log("LEVEL 1:", level1);
-console.log("LEVEL 2:", level2);
+console.log(
+  "========== CREATE AMENDMENT RESPONSE =========="
+);
+console.log("RAW:", result);
 console.log("AMENDMENT ID:", amendmentId);
-console.log("STATUS:", amendmentStatus);
-console.log("================================================"); 
+console.log("STATUS:", result?.data?.status);
+console.log("================================================");
 
-if (!amendmentStatus) {
-  const errorMessage =
-    typeof level2?.msg === "string"
-      ? level2.msg
-      : typeof level1?.msg === "string"
-        ? level1.msg
-        : typeof raw.msg === "string"
-          ? raw.msg
-          : "Bonton rejected the amendment creation request.";
-
-  toast.error(errorMessage);
+if (result?.data?.status !== true) {
+  toast.error(
+    result?.data?.msg ||
+      "Bonton rejected the amendment creation request."
+  );
   return;
 }
 
@@ -1334,16 +1288,17 @@ if (!amendmentId) {
   );
   return;
 }
-    
 
-      setAmendmentId(amendmentId);
+setAmendmentId(amendmentId);
 
 toast.success(
   "Amendment request created successfully."
 );
 
 await handleRefreshRecord(amendmentId);
-    };
+};
+
+
 
   /* =======================================================
      RECORD
@@ -1744,19 +1699,15 @@ await handleRetrieveBooking(bontonBookingId);
     );
 
   const canAccept =
-    Boolean(amendmentId) &&
-    !terminalStatus.includes(
-      "cancel"
-    ) &&
-    !terminalStatus.includes(
-      "reject"
-    ) &&
-    !terminalStatus.includes(
-      "accepted"
-    ) &&
-    !terminalStatus.includes(
-      "confirmed"
-    );
+  Boolean(amendmentId) &&
+  [
+    "quotation received",
+    "approved",
+    "approval received",
+    "ready for acceptance",
+  ].some((allowed) =>
+    terminalStatus.includes(allowed)
+  );
 
   /* =======================================================
      RENDER
