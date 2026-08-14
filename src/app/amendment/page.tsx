@@ -1271,60 +1271,70 @@ console.log("=====================================");
        */
 
       const raw =
-        result as unknown as Record<
-          string,
-          unknown
-        >;
+  result as unknown as Record<string, any>;
 
-      const nested =
-        raw.data &&
-        typeof raw.data === "object"
-          ? (raw.data as Record<
-              string,
-              unknown
-            >)
-          : null;
+const level1 =
+  raw.data &&
+  typeof raw.data === "object"
+    ? raw.data
+    : null;
 
-      const id =
-        (typeof raw.code === "string"
-          ? raw.code
-          : undefined) ??
-        (typeof nested?.code === "string"
-          ? nested.code
-          : undefined);
+const level2 =
+  level1?.data &&
+  typeof level1.data === "object"
+    ? level1.data
+    : null;
 
-      const status =
-        raw.status === true ||
-        nested?.status === true;
+const amendmentId =
+  (typeof raw.code === "string"
+    ? raw.code
+    : undefined) ??
+  (typeof level1?.code === "string"
+    ? level1.code
+    : undefined) ??
+  (typeof level2?.code === "string"
+    ? level2.code
+    : undefined);
 
-      if (!id) {
-        toast.error(
-          "Amendment was created but Bonton did not return an amendment ID."
-        );
-        return;
-      }
+const amendmentStatus =
+  raw.status === true ||
+  level1?.status === true ||
+  level2?.status === true;
 
-      if (status === false) {
-        toast.error(
-          typeof raw.msg === "string"
-            ? raw.msg
-            : "Bonton rejected the amendment creation request."
-        );
-        return;
-      }
+console.log("========== CREATE AMENDMENT RESPONSE ==========");
+console.log("RAW:", raw);
+console.log("LEVEL 1:", level1);
+console.log("LEVEL 2:", level2);
+console.log("AMENDMENT ID:", amendmentId);
+console.log("STATUS:", amendmentStatus);
+console.log("================================================"); 
 
-      setAmendmentId(id);
+      if (!amendmentId) {
+  toast.error(
+    "Amendment was created but Bonton did not return an amendment ID."
+  );
+  return;
+}
 
-      toast.success(
-        "Amendment request created successfully."
-      );
+if (!amendmentStatus) {
+  toast.error(
+    typeof level2?.msg === "string"
+      ? level2.msg
+      : typeof level1?.msg === "string"
+        ? level1.msg
+        : "Bonton rejected the amendment creation request."
+  );
+  return;
+}
+    
 
-      /*
-       * Immediately retrieve the amendment
-       * record using the returned ID.
-       */
+      setAmendmentId(amendmentId);
 
-      await handleRefreshRecord(id);
+toast.success(
+  "Amendment request created successfully."
+);
+
+await handleRefreshRecord(amendmentId);
     };
 
   /* =======================================================
