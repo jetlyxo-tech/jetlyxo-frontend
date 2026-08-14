@@ -354,8 +354,8 @@ export async function initiateAmendment(
       )}`
     );
 
-    const result =
-      response.data as InitiateAmendmentResponse;
+  const result =
+  response.data as InitiateAmendmentResponse;
 
     if (!result?.success) {
       throw new Error(
@@ -473,7 +473,9 @@ export async function createAmendment(
     );
 
     const result =
-      response.data as CreateAmendmentResponse;
+  getApiData<CreateAmendmentResponse>(
+    response.data
+  );
 
     console.log(
       "========== FRONTEND CREATE AMENDMENT RESPONSE =========="
