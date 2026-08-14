@@ -1,7 +1,8 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { getBookingById } from "@/lib/api";
 
 
 function Card({
@@ -23,38 +24,74 @@ function Card({
 
 function BookingSuccessContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [booking, setBooking] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const data = sessionStorage.getItem("bookingDetails");
-  
-    console.log("SESSION STORAGE:");
-    console.log(data);
-  
-    if (!data) {
-      router.push("/");
+    const bookingId = searchParams.get("bookingId");
+
+    if (!bookingId) {
+      setError("Booking ID is missing.");
+      setLoading(false);
       return;
     }
-  
-    const parsed = JSON.parse(data);
-  
-    console.log("BOOKING OBJECT:");
-    console.log(parsed);
-    console.log(JSON.stringify(parsed, null, 2));
-  
-    setBooking(parsed);
-  }, [router]);
 
-  if (!booking) {
-    
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white text-xl">
-        Loading Booking...
-      </div>
-    );
-  }
-  const bookingData = booking.data?.[0];
+    const loadBooking = async () => {
+      try {
+        console.log("========== LOADING TICKET ==========");
+        console.log("Booking ID:", bookingId);
+
+        const data = await getBookingById(Number(bookingId));
+
+        console.log("BOOKING FROM BACKEND:");
+        console.log(JSON.stringify(data, null, 2));
+
+        setBooking(data);
+      } catch (err) {
+        console.error("Failed to load booking:", err);
+        setError("Unable to load booking details.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadBooking();
+  }, [searchParams]);
+
+  if (loading) {
+   return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white text-xl">
+      Loading Booking...
+    </div>
+  );
+}
+
+if (error) {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-white">
+      <p className="text-xl mb-6">{error}</p>
+
+      <button
+        onClick={() => router.push("/my-bookings")}
+        className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-xl"
+      >
+        Back to My Bookings
+      </button>
+    </div>
+  );
+}
+
+if (!booking) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
+      Booking data not found.
+    </div>
+  );
+} 
+ const bookingData = booking;
 
 if (!bookingData) {
   return (
@@ -64,69 +101,94 @@ if (!bookingData) {
   );
 }
 
-  /* ==========================
-     Extract fields safely
-  ========================== */
+const flightData = Array.isArray(bookingData.flightData)
+  ? bookingData.flightData[0]
+  : null;
 
-  const bookingCode =
-  bookingData.brn ||
-  bookingData.invno ||
+ /* ==========================
+   Extract fields safely
+========================== */
+
+const segment = flightData?.segs?.[0];
+
+const bookingCode =
+  flightData?.brn ||
   "-";
 
-  const pnr =
+const pnr =
   bookingData.pnr ||
-  bookingData.gdsPnr ||
+  flightData?.pnr ||
+  flightData?.gdsPnr ||
   "-";
 
-  const passenger =
-  bookingData.trv?.[0]?.name ||
+const passenger =
+  bookingData.passengerName ||
+  flightData?.trv?.[0]?.name ||
   "-";
 
-  const airline =
-  bookingData.segs?.[0]?.airnm ||
+const airline =
+  segment?.airnm ||
   "-";
 
-  const flightNumber =
-  `${bookingData.segs?.[0]?.aircd || ""}-${bookingData.segs?.[0]?.fltno || ""}`;
+const flightNumber =
+  segment
+    ? `${segment.aircd || ""}-${segment.fltno || ""}`
+    : "-";
 
-    const origin =
-    bookingData.segs?.[0]?.orgcty ||
-    bookingData.org ||
-    "-";
+const origin =
+  segment?.orgapc ||
+  flightData?.org ||
+  "-";
 
-    const destination =
-    bookingData.segs?.[0]?.dstcty ||
-    bookingData.dst ||
-    "-";
-    const departure =
-    bookingData.segs?.[0]?.dptm ||
-    "-";
+const destination =
+  segment?.dstapc ||
+  flightData?.dst ||
+  "-";
 
-    const arrival =
-    bookingData.segs?.[0]?.artm ||
-    "-";
+const originCity =
+  segment?.orgcty ||
+  "-";
 
-    const seat =
-    bookingData.mbg?.[0]?.ssr_info ||
-    "Not Selected";
+const destinationCity =
+  segment?.dstcty ||
+  "-";
 
-    const meal =
-    bookingData.mbg?.find(
-      (x: any) => x.ssr_type === "Meal"
-    )?.ssr_info || "No Meal";
+const departure =
+  segment?.dptm ||
+  "-";
 
-    const fare =
-    bookingData.prcd?.np || 0;
+const arrival =
+  segment?.artm ||
+  "-";
 
-    const status =
-    bookingData.status || "Confirmed";
+const seat =
+  flightData?.mbg?.find(
+    (x: any) => x.ssr_type === "SeatDynamic"
+  )?.ssr_info ||
+  "Not Selected";
 
-    const ticketUrl =
-  bookingData.pdfUrl ??
-  bookingData.ticketUrl ??
-  bookingData.eTicketUrl ??
-  bookingData.pdf ??
-  bookingData.ticket ??
+const meal =
+  flightData?.mbg?.find(
+    (x: any) => x.ssr_type === "Meal"
+  )?.ssr_info ||
+  "No Meal";
+
+const fare =
+  Number(bookingData.totalPrice) ||
+  Number(flightData?.prcd?.np) ||
+  0;
+
+const status =
+  bookingData.status ||
+  flightData?.status ||
+  "CONFIRMED";
+
+const ticketUrl =
+  flightData?.pdfUrl ??
+  flightData?.ticketUrl ??
+  flightData?.eTicketUrl ??
+  flightData?.pdf ??
+  flightData?.ticket ??
   "";
 
     function formatDate(date: string) {
@@ -174,7 +236,7 @@ if (!bookingData) {
             <div>
 
             <h2 className="text-3xl font-bold">
-  {bookingData.segs?.[0]?.orgapc}
+             {origin}
   <span className="mx-4">✈</span>
   {bookingData.segs?.[0]?.dstapc}
 </h2>
@@ -231,14 +293,17 @@ if (!bookingData) {
   value={
     <>
       <div>{passenger}</div>
+
       <div className="text-sm text-gray-300 mt-1">
-        {bookingData.trv?.[0]?.pxt}
+        {flightData?.trv?.[0]?.pxt}
       </div>
+
       <div className="text-sm text-gray-300">
-        Cabin: {bookingData.trv?.[0]?.cbbg}
+        Cabin: {flightData?.trv?.[0]?.cbbg}
       </div>
+
       <div className="text-sm text-gray-300">
-        Check-in: {bookingData.trv?.[0]?.chbg}
+        Check-in: {flightData?.trv?.[0]?.chbg}
       </div>
     </>
   }
@@ -249,12 +314,16 @@ if (!bookingData) {
   title="Flight"
   value={
     <>
-      <div>{airline} {flightNumber}</div>
-      <div className="text-sm text-gray-300 mt-1">
-        {bookingData.segs?.[0]?.cbcls}
+      <div>
+        {airline} {flightNumber}
       </div>
+
+      <div className="text-sm text-gray-300 mt-1">
+        {segment?.cbcls}
+      </div>
+
       <div className="text-sm text-gray-300">
-        {bookingData.segs?.[0]?.dur}
+        {segment?.dur}
       </div>
     </>
   }
@@ -284,11 +353,18 @@ if (!bookingData) {
   title="Fare Breakdown"
   value={
     <>
-      <div>Base Fare : ₹{bookingData.prcd?.bfr}</div>
-      <div>Taxes : ₹{bookingData.prcd?.txf}</div>
+      <div>
+        Base Fare : ₹{flightData?.prcd?.bfr ?? 0}
+      </div>
+
+      <div>
+        Taxes : ₹{flightData?.prcd?.txf ?? 0}
+      </div>
+
       <hr className="my-2 border-slate-500" />
+
       <div className="font-bold">
-        Total : ₹{bookingData.prcd?.np}
+        Total : ₹{fare}
       </div>
     </>
   }
@@ -301,47 +377,50 @@ if (!bookingData) {
 
           </div>
 
-          {/* Buttons */}
+         {/* Buttons */}
 
-          <div className="grid md:grid-cols-4 gap-4 mt-10">
+<div className="grid md:grid-cols-4 gap-4 mt-10">
 
-            <button
-              disabled={!ticketUrl}
-              onClick={() =>
-                window.open(ticketUrl, "_blank")
-              }
-              className="bg-blue-600 hover:bg-blue-700 py-3 rounded-xl font-semibold disabled:opacity-50"
-            >
-              📄 Download Ticket
-            </button>
+  <button
+    disabled={!ticketUrl}
+    onClick={() => {
+      if (ticketUrl) {
+        window.open(ticketUrl, "_blank");
+      }
+    }}
+    className="bg-blue-600 hover:bg-blue-700 py-3 rounded-xl font-semibold disabled:opacity-50"
+  >
+    📄 Download Ticket
+  </button>
 
-            <button
-              onClick={() =>
-                router.push("/my-bookings")
-              }
-              className="bg-indigo-600 hover:bg-indigo-700 py-3 rounded-xl font-semibold"
-            >
-              📖 My Bookings
-            </button>
+  <button
+    onClick={() => router.push("/my-bookings")}
+    className="bg-indigo-600 hover:bg-indigo-700 py-3 rounded-xl font-semibold"
+  >
+    📖 My Bookings
+  </button>
 
-            <button
-              onClick={() => router.push("/")}
-              className="bg-slate-600 hover:bg-slate-500 py-3 rounded-xl font-semibold"
-            >
-              🏠 Home
-            </button>
-            <button
-  onClick={() =>
-    router.push(`/amendment?bookingCode=${bookingCode}`)
-  }
-  className="bg-orange-600 hover:bg-orange-700 py-3 rounded-xl font-semibold"
->
-  ✏️ Amend Booking
-</button>
+  <button
+    onClick={() => router.push("/")}
+    className="bg-slate-600 hover:bg-slate-500 py-3 rounded-xl font-semibold"
+  >
+    🏠 Home
+  </button>
 
-            
+  <button
+    onClick={() =>
+      router.push(
+        `/amendment?bookingId=${encodeURIComponent(
+          bookingData.id
+        )}`
+      )
+    }
+    className="bg-orange-600 hover:bg-orange-700 py-3 rounded-xl font-semibold"
+  >
+    ✏️ Amend Booking
+  </button>
 
-          </div>
+</div>
 
         </div>
 
