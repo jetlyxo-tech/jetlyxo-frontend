@@ -397,12 +397,7 @@ export default function SearchWidget({
                       SWAP BUTTON
                   ================================================== */}
 
-                  <motion.button
-                    whileHover={{
-                      scale: 1.08,
-                      rotate: 180,
-                    }}
-                    whileTap={{ scale: 0.94 }}
+<button
                     type="button"
                     onClick={swapLocations}
                     className="
@@ -427,7 +422,7 @@ export default function SearchWidget({
                     aria-label="Swap departure and destination"
                   >
                     <ArrowRightLeft size={17} />
-                  </motion.button>
+                    </button>
                 </div>
 
                 {/* ===================================================
