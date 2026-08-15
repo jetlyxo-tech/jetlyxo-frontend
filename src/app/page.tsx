@@ -13,7 +13,6 @@ import Deals from "@/components/Deals";
 import Features from "@/components/Features";
 import Trust from "@/components/Trust";
 
-import AIAssistant from "@/components/AIAssistant";
 import FlightAnimation from "@/components/FlightAnimation";
 import { getToken } from "@/lib/auth";
 
@@ -41,10 +40,8 @@ export default function Home() {
   const [trainResults, setTrainResults] = useState<Train[] | null>(null);
 
   const [showLoginModal, setShowLoginModal] = useState(false);
-const [showOffer, setShowOffer] = useState(true);
+  const [showOffer, setShowOffer] = useState(true);
 
-const [showBot, setShowBot] = useState(true);
-const [openChat, setOpenChat] = useState(false);
   const [loadingService, setLoadingService] = useState<
   "flights" | "buses" | "trains" | null
 >(null);
@@ -75,10 +72,6 @@ const [selectedService, setSelectedService] = useState<
   ========================= */
   const handleFlightsClick = useCallback(async () => {
 
-
-    
-    // ✅ AUTH CHECK (TOP)
-    //const token = localStorage.getItem("jetly_token");
     const token = getToken();
     if (!token) {
       localStorage.setItem("redirectAfterLogin", "/");
@@ -308,28 +301,6 @@ const formatted = results.map((flight: any) => ({
     }}
   />
 </Hero>
-{showOffer && (
-  <div className="fixed left-3 right-3 sm:left-5 sm:right-auto top-24 bg-white text-black p-4 rounded-xl shadow-lg w-auto sm:w-[250px] z-40">
-    <button
-      onClick={() => setShowOffer(false)}
-      className="absolute top-1 right-2 text-sm"
-    >
-      ✕
-    </button>
-
-    <h3 className="font-bold text-sm mb-2">
-      ✈️ Special Offer
-    </h3>
-
-    <p className="text-sm">
-      Get up to <span className="font-semibold">40% OFF</span> on flights
-    </p>
-
-    <button className="mt-3 bg-blue-600 text-white px-3 py-1 rounded text-sm">
-      View Deals
-    </button>
-  </div>
-)}
 
 {selectedService === "flights" && (
   <div id="search" className="container mx-auto px-4 py-8">
@@ -411,26 +382,7 @@ const formatted = results.map((flight: any) => ({
   </div>
 )}
 
-{showBot && (
-  <div className="fixed bottom-20 right-4 sm:right-6 z-50">
 
-    {/* Robot */}
-    <div
-      onClick={() => setOpenChat(true)}
-      className="cursor-pointer animate-bounce bg-white p-3 rounded-full shadow-lg"
-    >
-      🤖
-    </div>
-
-    {/* Message bubble */}
-    <div className="mt-2 bg-white text-black px-3 py-2 rounded-xl shadow text-sm">
-      Hi 👋 Need help planning?
-    </div>
-
-  </div>
-)}
-
-      <AIAssistant />
       <FlightAnimation />
 
     </main>

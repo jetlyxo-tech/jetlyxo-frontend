@@ -406,24 +406,24 @@ export default function SearchWidget({
                     type="button"
                     onClick={swapLocations}
                     className="
-                      absolute
-                      z-20
-                      right-3
-                      top-1/2
-                      flex
-                      h-10
-                      w-10
-                      -translate-y-1/2
-                      translate-x-1/2
-                      items-center
-                      justify-center
-                      rounded-full
-                      border
-                      border-slate-300
-                      bg-white
-                      text-slate-800
-                      shadow-lg
-                    "
+  absolute
+  z-20
+  right-0
+  top-1/2
+  flex
+  h-10
+  w-10
+  -translate-y-1/2
+  translate-x-1/2
+  items-center
+  justify-center
+  rounded-full
+  border
+  border-slate-300
+  bg-white
+  text-slate-800
+  shadow-lg
+"
                     aria-label="Swap departure and destination"
                   >
                     <ArrowRightLeft size={17} />
