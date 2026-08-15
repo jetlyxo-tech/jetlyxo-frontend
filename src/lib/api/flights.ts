@@ -117,11 +117,11 @@ const flights: Flight[] =
 
 const searchId =
   response?.searchId ??
+  response?.stid ??
   "";
 
 const tId =
   response?.tId ??
-  response?.stid ??
   "";
 
 return flights.map((flight) => ({
