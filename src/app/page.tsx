@@ -12,19 +12,12 @@ import TrendingDestinations from "@/components/TrendingDestinations";
 import Deals from "@/components/Deals";
 import Features from "@/components/Features";
 import Trust from "@/components/Trust";
-
 import FlightAnimation from "@/components/FlightAnimation";
-import { getToken } from "@/lib/auth";
-
-
 import type { Bus } from "@/types/bus";
 import type { Train } from "@/types/train";
+import { getToken } from "@/lib/auth";
 import { useRouter } from "next/navigation";
-
-
-import { searchFlights,searchBuses, searchTrains } from "@/lib/api";
-
-
+import { searchBuses, searchTrains } from "@/lib/api";
 export default function Home() {
   
   const router = useRouter();
@@ -67,74 +60,7 @@ const [selectedService, setSelectedService] = useState<
     return Array.from(new Map(data.map(i => [i.id, i])).values());
   };
 
-  /* =========================
-     FLIGHTS
-  ========================= */
-  const handleFlightsClick = useCallback(async () => {
 
-    const token = getToken();
-    if (!token) {
-      localStorage.setItem("redirectAfterLogin", "/");
-      router.push("/login");
-      return;
-    }
-  
-    if (requestLock) return;
-    setRequestLock(true);
-  
-    setBusResults(null);
-    setTrainResults(null);
-    setLoadingService("flights");
-    
-    try {
-      const results = await searchFlights({
-        from: "BLR",
-        to: "HYD",
-        departureDate: "2026-07-10",
-        travellers: 1,
-        children: 0,
-        infants: 0,
-        cabin: "ECONOMY",
-      });
-  
-      console.log("Flights returned:", results);
-        
-const formatted = results.map((flight: any) => ({
-  ...flight,
-
-  id: flight.id,
-
-  airline: flight.airline ?? flight.carrier ?? "Unknown Airline",
-
-  from: flight.from ?? flight.fromCity ?? "N/A",
-  to: flight.to ?? flight.toCity ?? "N/A",
-
-  departureTime:
-    flight.departureTime ??
-    flight.departure ??
-    "",
-
-  arrivalTime:
-    flight.arrivalTime ??
-    flight.arrival ??
-    "",
-
-  price: flight.price ?? 0,
-
-  seats: flight.seats,
-}));
-  
-      setFlightResults(dedupe(formatted));
-  
-    } catch {
-      setFlightResults([]);
-    } finally {
-      scrollToResults();
-      setLoadingService(null);
-      setRequestLock(false);
-    }
-  
-  }, [scrollToResults, requestLock, router]);
   /* =========================
      BUSES
   ========================= */
@@ -267,16 +193,20 @@ const formatted = results.map((flight: any) => ({
      <Hero>
   <Services
     onFlightsClick={() => {
-      setSelectedService("flights");
-      handleFlightsClick();
+  setSelectedService("flights");
 
-      setTimeout(() => {
-        document.getElementById("search")?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      }, 100);
-    }}
+  setFlightResults(null);
+  setBusResults(null);
+  setTrainResults(null);
+  setLoadingService(null);
+
+  setTimeout(() => {
+    document.getElementById("search")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, 100);
+}}
     onBusesClick={() => {
       setSelectedService("buses");
       handleBusesClick();
