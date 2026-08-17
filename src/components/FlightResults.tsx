@@ -43,25 +43,20 @@ type NormalizedFlight = {
   airline: string;
   airlineCode?: string;
 
+  from: string;
+  to: string;
+
   priceNumber: number;
   priceDisplay: string;
 
   duration: string;
-
   dep: string;
-
   stops: string;
-
   seats: number | null;
-
   cabin: string;
-
   fareType: string;
-
   badge?: string;
-
   searchId?: string;
-
   tId?: string;
 };
 
@@ -96,12 +91,15 @@ function normalizeFlight(
   const price = Number(flight.price ?? 0);
 
   return {
-    id: flight.id ?? index,
+  id: flight.id ?? index,
 
-    airline: flight.airline || "Unknown Airline",
-    airlineCode: (flight as any).airlineCode || "",
+  airline: flight.airline || "Unknown Airline",
+  airlineCode: (flight as any).airlineCode || "",
 
-priceNumber: price,
+  from: flight.from || "",
+  to: flight.to || "",
+
+  priceNumber: price,
 
     priceDisplay:
       price > 0
@@ -199,8 +197,8 @@ function BookNowButton({
 
 export default function FlightResults({
   flights,
-  from = "BLR",
-  to = "DEL",
+  from,
+  to,
   departureDate,
 }: FlightResultsProps) {
   const [flightList, setFlightList] =
@@ -1074,23 +1072,23 @@ const applyProviderFilters = useCallback(
                 </div>
 
                 {/* ROUTE */}
-                <div className="flex flex-wrap items-center gap-3 mt-4">
-                  <span className="font-semibold text-white">
-                    {from}
-                  </span>
+<div className="flex flex-wrap items-center gap-3 mt-4">
+  <span className="font-semibold text-white">
+    {flight.from || from || "--"}
+  </span>
 
-                  <div className="flex-1 min-w-[40px] border-t border-dashed border-cyan-500/40" />
+  <div className="flex-1 min-w-[40px] border-t border-dashed border-cyan-500/40" />
 
-                  <span className="text-cyan-300 text-lg">
-                    ✈
-                  </span>
+  <span className="text-cyan-300 text-lg">
+    ✈
+  </span>
 
-                  <div className="flex-1 min-w-[40px] border-t border-dashed border-cyan-500/40" />
+  <div className="flex-1 min-w-[40px] border-t border-dashed border-cyan-500/40" />
 
-                  <span className="font-semibold text-white">
-                    {to}
-                  </span>
-                </div>
+  <span className="font-semibold text-white">
+    {flight.to || to || "--"}
+  </span>
+</div>
 
                 {/* TIME + DURATION */}
                 <div className="flex items-center gap-4 mt-2">

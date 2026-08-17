@@ -123,11 +123,13 @@ export default function SearchWidget({
     );
   }, []);
 
-  async function handleSearch(e?: React.FormEvent) {
-    e?.preventDefault();
+ async function handleSearch(e?: React.FormEvent) {
+  e?.preventDefault();
 
-    setLoading(true);
-    setError("");
+  if (loading) return;
+
+  setLoading(true);
+  setError("");
 
     try {
       fetch(`${API_BASE}/behavior/track`, {
