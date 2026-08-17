@@ -502,11 +502,37 @@ const loadNextFlights = useCallback(async () => {
 /* ---------------------------------------------
    NORMALIZED DATA
 --------------------------------------------- */
-console.log("========== FRONTEND ROUND TRIP DATA ==========");
 console.log(
+  "========== FRONTEND ROUND TRIP DETAILS ==========",
   flightList
     .filter((f: any) => f.tripType === "ROUND_TRIP")
     .slice(0, 3)
+    .map((f: any) => ({
+      id: f.id,
+      tripType: f.tripType,
+
+      onward: {
+        from: f.from,
+        to: f.to,
+        departure: f.departure,
+        price: f.price,
+      },
+
+      returnFlight: f.returnFlight
+        ? {
+            id: f.returnFlight.id,
+            from: f.returnFlight.from,
+            to: f.returnFlight.to,
+            departure: f.returnFlight.departure,
+            arrival: f.returnFlight.arrival,
+            duration: f.returnFlight.duration,
+            stops: f.returnFlight.stops,
+            price: f.returnFlight.price,
+          }
+        : null,
+
+      totalPrice: f.totalPrice,
+    }))
 );
   const normalizedFlights =
     useMemo(() => {
