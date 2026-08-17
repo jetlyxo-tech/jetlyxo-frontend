@@ -324,19 +324,26 @@ export default function FlightResults({
   setHasMoreFlights(true);
 }, [flights]);
 
-  useEffect(() => {
-    if (!flightList.length) return;
+ useEffect(() => {
+  if (!flightList.length) return;
 
-    const highest = Math.max(
-      ...flightList.map((f) =>
-        Number(f.price ?? 0)
-      )
-    );
+  const highest = Math.max(
+    ...flightList.map((f: any) => {
+      if (f.tripType === "ROUND_TRIP") {
+        return Number(
+          f.totalPrice ??
+          Number(f.price ?? 0) +
+            Number(f.returnFlight?.price ?? 0)
+        );
+      }
 
-    setSliderMax(highest);
+      return Number(f.price ?? 0);
+    })
+  );
 
-    setPriceLimit(highest);
-  }, [flightList]);
+  setSliderMax(highest);
+  setPriceLimit(highest);
+}, [flightList]);
 
 /* ---------------------------------------------
    BONTON NEXT FILTER BUILDER
