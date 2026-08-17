@@ -58,6 +58,24 @@ type NormalizedFlight = {
   badge?: string;
   searchId?: string;
   tId?: string;
+
+  // ROUND TRIP
+  tripType?: string;
+  returnFlight?: {
+    id?: string | number;
+    airline?: string;
+    airlineCode?: string;
+    from?: string;
+    to?: string;
+    departure?: string;
+    arrival?: string;
+    duration?: string;
+    stops?: number;
+    price?: number;
+    seats?: number;
+    cabin?: string;
+    flightNumber?: string;
+  };
 };
 
 type FlightResultsProps = {
@@ -90,16 +108,18 @@ function normalizeFlight(
 ): NormalizedFlight {
   const price = Number(flight.price ?? 0);
 
+  const rawFlight = flight as any;
+
   return {
-  id: flight.id ?? index,
+    id: flight.id ?? index,
 
-  airline: flight.airline || "Unknown Airline",
-  airlineCode: (flight as any).airlineCode || "",
+    airline: flight.airline || "Unknown Airline",
+    airlineCode: (flight as any).airlineCode || "",
 
-  from: flight.from || "",
-  to: flight.to || "",
+    from: flight.from || "",
+    to: flight.to || "",
 
-  priceNumber: price,
+    priceNumber: price,
 
     priceDisplay:
       price > 0
@@ -131,6 +151,27 @@ function normalizeFlight(
     searchId: flight.searchId,
 
     tId: flight.tId,
+
+    // ROUND TRIP DATA
+    tripType: rawFlight.tripType,
+
+    returnFlight: rawFlight.returnFlight
+      ? {
+          id: rawFlight.returnFlight.id,
+          airline: rawFlight.returnFlight.airline,
+          airlineCode: rawFlight.returnFlight.airlineCode,
+          from: rawFlight.returnFlight.from,
+          to: rawFlight.returnFlight.to,
+          departure: rawFlight.returnFlight.departure,
+          arrival: rawFlight.returnFlight.arrival,
+          duration: rawFlight.returnFlight.duration,
+          stops: rawFlight.returnFlight.stops,
+          price: Number(rawFlight.returnFlight.price ?? 0),
+          seats: rawFlight.returnFlight.seats,
+          cabin: rawFlight.returnFlight.cabin,
+          flightNumber: rawFlight.returnFlight.flightNumber,
+        }
+      : undefined,
   };
 }
 
@@ -1071,42 +1112,119 @@ const applyProviderFilters = useCallback(
                   )}
                 </div>
 
-                {/* ROUTE */}
-<div className="flex flex-wrap items-center gap-3 mt-4">
-  <span className="font-semibold text-white">
-    {flight.from || from || "--"}
-  </span>
+{/* =========================================
+    ONWARD FLIGHT
+========================================= */}
 
-  <div className="flex-1 min-w-[40px] border-t border-dashed border-cyan-500/40" />
+<div className="mt-4">
 
-  <span className="text-cyan-300 text-lg">
-    ✈
-  </span>
+  <p className="text-xs font-semibold text-cyan-400 mb-2">
+    DEPARTURE
+  </p>
 
-  <div className="flex-1 min-w-[40px] border-t border-dashed border-cyan-500/40" />
+  <div className="flex flex-wrap items-center gap-3">
 
-  <span className="font-semibold text-white">
-    {flight.to || to || "--"}
-  </span>
+    <span className="font-semibold text-white">
+      {flight.from || from || "--"}
+    </span>
+
+    <div className="flex-1 min-w-[40px] border-t border-dashed border-cyan-500/40" />
+
+    <span className="text-cyan-300 text-lg">
+      ✈
+    </span>
+
+    <div className="flex-1 min-w-[40px] border-t border-dashed border-cyan-500/40" />
+
+    <span className="font-semibold text-white">
+      {flight.to || to || "--"}
+    </span>
+
+  </div>
+
+  <div className="flex items-center gap-4 mt-2">
+
+    <span className="text-xl font-semibold text-white">
+      {flight.dep}
+    </span>
+
+    <div className="flex-1 h-px bg-white/20" />
+
+    <span className="text-sm text-white/60">
+      {flight.duration}
+    </span>
+
+  </div>
+
+  <p className="text-sm text-white/70 mt-1">
+    {flight.duration} • {flight.stops}
+  </p>
+
 </div>
 
-                {/* TIME + DURATION */}
-                <div className="flex items-center gap-4 mt-2">
-                  <span className="text-xl font-semibold text-white">
-                    {flight.dep}
-                  </span>
 
-                  <div className="flex-1 h-px bg-white/20" />
+{/* =========================================
+    RETURN FLIGHT
+========================================= */}
 
-                  <span className="text-sm text-white/60">
-                    {flight.duration}
-                  </span>
-                </div>
+{flight.returnFlight && (
+  <div className="mt-5 pt-4 border-t border-white/10">
 
-                <p className="text-sm text-white/70 mt-1">
-                  {flight.duration} • {flight.stops}
-                </p>
+    <p className="text-xs font-semibold text-purple-400 mb-2">
+      RETURN
+    </p>
 
+    <div className="flex flex-wrap items-center gap-3">
+
+      <span className="font-semibold text-white">
+        {flight.returnFlight.from || "--"}
+      </span>
+
+      <div className="flex-1 min-w-[40px] border-t border-dashed border-purple-500/40" />
+
+      <span className="text-purple-300 text-lg">
+        ✈
+      </span>
+
+      <div className="flex-1 min-w-[40px] border-t border-dashed border-purple-500/40" />
+
+      <span className="font-semibold text-white">
+        {flight.returnFlight.to || "--"}
+      </span>
+
+    </div>
+
+    <div className="flex items-center gap-4 mt-2">
+
+      <span className="text-xl font-semibold text-white">
+        {flight.returnFlight.departure
+          ? new Date(flight.returnFlight.departure)
+              .toLocaleTimeString("en-IN", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false,
+              })
+          : "--:--"}
+      </span>
+
+      <div className="flex-1 h-px bg-white/20" />
+
+      <span className="text-sm text-white/60">
+        {flight.returnFlight.duration || "N/A"}
+      </span>
+
+    </div>
+
+    <p className="text-sm text-white/70 mt-1">
+      {flight.returnFlight.duration || "N/A"}
+      {" • "}
+      {flight.returnFlight.stops === 0
+        ? "Non-stop"
+        : `${flight.returnFlight.stops ?? 0} Stop`}
+    </p>
+
+  </div>
+)}
                 {/* SEATS */}
                 <p
                   className={`text-sm mt-2 font-medium ${
