@@ -112,6 +112,14 @@ function normalizeFlight(
 
   const rawFlight = flight as any;
 
+const totalPrice =
+  rawFlight.tripType === "ROUND_TRIP"
+    ? Number(
+        rawFlight.totalPrice ??
+        price + Number(rawFlight.returnFlight?.price ?? 0)
+      )
+    : price;
+
   return {
     id: flight.id ?? index,
 
@@ -121,12 +129,12 @@ function normalizeFlight(
     from: flight.from || "",
     to: flight.to || "",
 
-    priceNumber: price,
+   priceNumber: totalPrice,
 
-    priceDisplay:
-      price > 0
-        ? `₹${price.toLocaleString("en-IN")}`
-        : "—",
+  priceDisplay:
+  price > 0
+    ? `₹${price.toLocaleString("en-IN")}`
+    : "—",
 
     duration: flight.duration || "N/A",
 
@@ -157,32 +165,33 @@ function normalizeFlight(
 // ROUND TRIP DATA
 tripType: rawFlight.tripType,
 
-returnFlight: rawFlight.returnFlight
-  ? {
-      id: rawFlight.returnFlight.id,
-      airline: rawFlight.returnFlight.airline,
-      airlineCode: rawFlight.returnFlight.airlineCode,
-      from: rawFlight.returnFlight.from,
-      to: rawFlight.returnFlight.to,
-      departure: rawFlight.returnFlight.departure,
-      arrival: rawFlight.returnFlight.arrival,
-      duration: rawFlight.returnFlight.duration,
-      stops: rawFlight.returnFlight.stops,
-      price: Number(rawFlight.returnFlight.price ?? 0),
-      seats: rawFlight.returnFlight.seats,
-      cabin: rawFlight.returnFlight.cabin,
-      flightNumber: rawFlight.returnFlight.flightNumber,
-      totalPrice: Number(
-        rawFlight.returnFlight.totalPrice ??
-        rawFlight.returnFlight.price ??
-        0
-      ),
-    }
-  : undefined,
+returnFlight:
+  rawFlight.tripType === "ROUND_TRIP" &&
+  rawFlight.returnFlight?.from &&
+  rawFlight.returnFlight?.to
+    ? {
+        id: rawFlight.returnFlight.id,
+        airline: rawFlight.returnFlight.airline,
+        airlineCode: rawFlight.returnFlight.airlineCode,
+        from: rawFlight.returnFlight.from,
+        to: rawFlight.returnFlight.to,
+        departure: rawFlight.returnFlight.departure,
+        arrival: rawFlight.returnFlight.arrival,
+        duration: rawFlight.returnFlight.duration,
+        stops: rawFlight.returnFlight.stops,
+        price: Number(rawFlight.returnFlight.price ?? 0),
+        seats: rawFlight.returnFlight.seats,
+        cabin: rawFlight.returnFlight.cabin,
+        flightNumber: rawFlight.returnFlight.flightNumber,
+        totalPrice: Number(
+          rawFlight.returnFlight.totalPrice ??
+          rawFlight.returnFlight.price ??
+          0
+        ),
+      }
+    : undefined,
 
-totalPrice: Number(
-  rawFlight.totalPrice ?? rawFlight.price ?? 0
-),
+totalPrice,
 };
 }
 
