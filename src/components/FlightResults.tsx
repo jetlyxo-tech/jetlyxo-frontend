@@ -502,7 +502,12 @@ const loadNextFlights = useCallback(async () => {
 /* ---------------------------------------------
    NORMALIZED DATA
 --------------------------------------------- */
-
+console.log("========== FRONTEND ROUND TRIP DATA ==========");
+console.log(
+  flightList
+    .filter((f: any) => f.tripType === "ROUND_TRIP")
+    .slice(0, 3)
+);
   const normalizedFlights =
     useMemo(() => {
       return flightList.map((flight, index) =>
