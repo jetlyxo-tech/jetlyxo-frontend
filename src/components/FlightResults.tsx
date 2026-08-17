@@ -36,7 +36,6 @@ const SORT_OPTIONS = [
 /* ---------------------------------------------
    TYPES
 --------------------------------------------- */
-
 type NormalizedFlight = {
   id: string | number;
 
@@ -61,6 +60,8 @@ type NormalizedFlight = {
 
   // ROUND TRIP
   tripType?: string;
+  totalPrice?: number;
+
   returnFlight?: {
     id?: string | number;
     airline?: string;
@@ -75,6 +76,7 @@ type NormalizedFlight = {
     seats?: number;
     cabin?: string;
     flightNumber?: string;
+    totalPrice?: number;
   };
 };
 
@@ -152,27 +154,36 @@ function normalizeFlight(
 
     tId: flight.tId,
 
-    // ROUND TRIP DATA
-    tripType: rawFlight.tripType,
+// ROUND TRIP DATA
+tripType: rawFlight.tripType,
 
-    returnFlight: rawFlight.returnFlight
-      ? {
-          id: rawFlight.returnFlight.id,
-          airline: rawFlight.returnFlight.airline,
-          airlineCode: rawFlight.returnFlight.airlineCode,
-          from: rawFlight.returnFlight.from,
-          to: rawFlight.returnFlight.to,
-          departure: rawFlight.returnFlight.departure,
-          arrival: rawFlight.returnFlight.arrival,
-          duration: rawFlight.returnFlight.duration,
-          stops: rawFlight.returnFlight.stops,
-          price: Number(rawFlight.returnFlight.price ?? 0),
-          seats: rawFlight.returnFlight.seats,
-          cabin: rawFlight.returnFlight.cabin,
-          flightNumber: rawFlight.returnFlight.flightNumber,
-        }
-      : undefined,
-  };
+returnFlight: rawFlight.returnFlight
+  ? {
+      id: rawFlight.returnFlight.id,
+      airline: rawFlight.returnFlight.airline,
+      airlineCode: rawFlight.returnFlight.airlineCode,
+      from: rawFlight.returnFlight.from,
+      to: rawFlight.returnFlight.to,
+      departure: rawFlight.returnFlight.departure,
+      arrival: rawFlight.returnFlight.arrival,
+      duration: rawFlight.returnFlight.duration,
+      stops: rawFlight.returnFlight.stops,
+      price: Number(rawFlight.returnFlight.price ?? 0),
+      seats: rawFlight.returnFlight.seats,
+      cabin: rawFlight.returnFlight.cabin,
+      flightNumber: rawFlight.returnFlight.flightNumber,
+      totalPrice: Number(
+        rawFlight.returnFlight.totalPrice ??
+        rawFlight.returnFlight.price ??
+        0
+      ),
+    }
+  : undefined,
+
+totalPrice: Number(
+  rawFlight.totalPrice ?? rawFlight.price ?? 0
+),
+};
 }
 
 /* ---------------------------------------------
@@ -186,6 +197,7 @@ function BookNowButton({
   flightId,
   searchId,
   tId,
+  tripType,
 }: {
   priceNumber: number;
   airline: string;
@@ -193,6 +205,7 @@ function BookNowButton({
   flightId: Flight["id"];
   searchId?: string;
   tId?: string;
+  tripType?: string;
 }) {
   const router = useRouter();
 
@@ -227,7 +240,9 @@ function BookNowButton({
       onClick={handleClick}
       className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:scale-105 transition text-white font-semibold shadow-lg"
     >
-      Book Flight →
+{tripType === "ROUND_TRIP"
+  ? "Book Round Trip →"
+  : "Book Flight →"}
     </button>
   );
 }
@@ -1107,20 +1122,33 @@ const applyProviderFilters = useCallback(
                   </div>
 
                   <div>
-                    <p className="font-semibold text-lg text-white">
-                      {flight.airline}
-                    </p>
+  <p className="font-semibold text-lg text-white">
+    {flight.airline}
+  </p>
 
-                    <div className="flex gap-2 mt-2">
-                      <span className="px-2 py-1 rounded-full bg-cyan-500/20 text-cyan-300 text-xs">
-                        {flight.cabin}
-                      </span>
+  <div className="flex gap-2 mt-2 flex-wrap">
+    {/* Trip Type */}
+    {flight.tripType === "ROUND_TRIP" ? (
+      <span className="px-2 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-medium">
+        Round Trip
+      </span>
+    ) : (
+      <span className="px-2 py-1 rounded-full bg-cyan-500/20 text-cyan-300 text-xs font-medium">
+        One Way
+      </span>
+    )}
 
-                      <span className="px-2 py-1 rounded-full bg-white/10 text-white/70 text-xs">
-                        {flight.fareType}
-                      </span>
-                    </div>
-                  </div>
+    {/* Cabin */}
+    <span className="px-2 py-1 rounded-full bg-cyan-500/20 text-cyan-300 text-xs">
+      {flight.cabin}
+    </span>
+
+    {/* Fare Type */}
+    <span className="px-2 py-1 rounded-full bg-white/10 text-white/70 text-xs">
+      {flight.fareType}
+    </span>
+  </div>
+</div>
                 </div>
 
                 <div className="flex gap-2 mt-3 flex-wrap">
@@ -1284,11 +1312,15 @@ const applyProviderFilters = useCallback(
               <div className="flex flex-col sm:items-end items-start w-full sm:w-auto gap-3">
                 <div className="w-full lg:w-auto flex flex-col items-start lg:items-end gap-1">
                   <p className="text-xs text-white/40">
-                    Per Traveller
+                    {flight.tripType === "ROUND_TRIP"
+  ? "Total Round Trip"
+  : "Per Traveller"}
                   </p>
 
                   <p className="text-3xl font-bold text-white">
-                    {flight.priceDisplay}
+                    {flight.tripType === "ROUND_TRIP"
+  ? `₹${Number(flight.totalPrice ?? flight.priceNumber).toLocaleString("en-IN")}`
+  : flight.priceDisplay}
                   </p>
 
                   <p className="text-xs text-green-300">
@@ -1296,14 +1328,15 @@ const applyProviderFilters = useCallback(
                   </p>
                 </div>
 
-                <BookNowButton
-                  priceNumber={flight.priceNumber}
-                  airline={flight.airline}
-                  duration={flight.duration}
-                  flightId={flight.id}
-                  searchId={flight.searchId}
-                  tId={flight.tId}
-                />
+               <BookNowButton
+  priceNumber={flight.priceNumber}
+  airline={flight.airline}
+  duration={flight.duration}
+  flightId={flight.id}
+  searchId={flight.searchId}
+  tId={flight.tId}
+  tripType={flight.tripType}
+/>
               </div>
             </motion.div>
           ))}
