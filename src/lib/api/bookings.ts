@@ -93,6 +93,32 @@ export async function getBookingById(
   }
 }
 
+export async function downloadBookingTicket(
+  id: number
+): Promise<Blob> {
+  try {
+    const response = await apiClient.get(
+      `/bookings/${id}/ticket`,
+      {
+        responseType: "blob",
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    const err = error as AxiosError<{ message?: string }>;
+
+    console.error(
+      "Download Ticket Error:",
+      err.response?.data || err.message
+    );
+
+    throw new Error(
+      "Failed to download ticket"
+    );
+  }
+}
+
 export async function verifyTicket(
   pnr: string
 ) {
