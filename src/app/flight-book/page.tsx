@@ -373,7 +373,7 @@ const displayTotal =
 
         gste: "",
 
-        isg,
+        isg: false,
 
         /* =========================
            CONTACT
