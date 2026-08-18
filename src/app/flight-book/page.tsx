@@ -519,8 +519,7 @@ const displayTotal =
            * amount is available in
            * bontonPayload.totalPrice.
            */
-          totalPrice:
-            Number(price),
+          totalPrice: displayTotal,
 
           /*
            * Save the complete
