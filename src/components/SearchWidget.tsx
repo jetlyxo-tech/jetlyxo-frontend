@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MapPin,
@@ -41,6 +41,16 @@ type Props = {
   onScrollToResultsAction?: () => void;
 };
 
+type Airport = {
+  airport_code: string;
+  airport_name: string;
+  city: string;
+  city_code: string;
+  country: string;
+  country_code: string;
+  display_name: string;
+};
+
 const FARES = [
   "Regular",
   "Student",
@@ -74,6 +84,18 @@ export default function SearchWidget({
 
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  
+  const [fromAirports, setFromAirports] = useState<Airport[]>([]);
+  const [toAirports, setToAirports] = useState<Airport[]>([]);
+
+  const [showFromAirports, setShowFromAirports] = useState(false);
+  const [showToAirports, setShowToAirports] = useState(false);
+
+  const [selectedFromCode, setSelectedFromCode] = useState("");
+  const [selectedToCode, setSelectedToCode] = useState("");
+
+  const fromRequestRef = useRef(0);
+  const toRequestRef = useRef(0);
 
   const [departure, setDeparture] = useState("");
   const [returnDate, setReturnDate] = useState("");
@@ -125,13 +147,124 @@ const [cabin, setCabin] = useState("economy");
     );
   }, []);
 
+const searchAirportSuggestions = async (
+  keyword: string,
+  type: "from" | "to"
+) => {
+  const search = keyword.trim();
+
+  if (search.length < 2) {
+    if (type === "from") {
+      setFromAirports([]);
+      setShowFromAirports(false);
+    } else {
+      setToAirports([]);
+      setShowToAirports(false);
+    }
+
+    return;
+  }
+
+  const requestId =
+    type === "from"
+      ? ++fromRequestRef.current
+      : ++toRequestRef.current;
+
+  try {
+    const response = await fetch(
+      `${API_BASE}/airports/search?keyword=${encodeURIComponent(search)}`
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch airports");
+    }
+
+    const result = await response.json();
+
+    // Ignore stale response
+    if (
+      type === "from" &&
+      requestId !== fromRequestRef.current
+    ) {
+      return;
+    }
+
+    if (
+      type === "to" &&
+      requestId !== toRequestRef.current
+    ) {
+      return;
+    }
+
+    const airports: Airport[] =
+      result.data ?? [];
+
+    if (type === "from") {
+      setFromAirports(airports);
+      setShowFromAirports(true);
+    } else {
+      setToAirports(airports);
+      setShowToAirports(true);
+    }
+  } catch (error) {
+    console.error(
+      "Airport search failed:",
+      error
+    );
+  }
+};
+
+useEffect(() => {
+  const timer = setTimeout(() => {
+    searchAirportSuggestions(from, "from");
+  }, 400);
+
+  return () => clearTimeout(timer);
+}, [from]);
+
+useEffect(() => {
+  const timer = setTimeout(() => {
+    searchAirportSuggestions(to, "to");
+  }, 400);
+
+  return () => clearTimeout(timer);
+}, [to]);
+
  async function handleSearch(e?: React.FormEvent) {
   e?.preventDefault();
 
   if (loading) return;
 
-  setLoading(true);
-  setError("");
+if (!selectedFromCode) {
+  setError("Please select a departure airport from the suggestions.");
+  return;
+}
+
+if (!selectedToCode) {
+  setError("Please select a destination airport from the suggestions.");
+  return;
+}
+
+if (selectedFromCode === selectedToCode) {
+  setError("Departure and destination airports cannot be the same.");
+  return;
+}
+
+if (!departure) {
+  setError("Please select a departure date.");
+  return;
+}
+
+if (
+  activeTab === "round-trip" &&
+  !returnDate
+) {
+  setError("Please select a return date.");
+  return;
+}
+
+setLoading(true);
+setError("");
 
     try {
       fetch(`${API_BASE}/behavior/track`, {
@@ -148,9 +281,9 @@ const [cabin, setCabin] = useState("economy");
         }),
       }).catch(() => {});
 
-    const params = {
-  from,
-  to,
+   const params = {
+  from: selectedFromCode || from,
+  to: selectedToCode || to,
   departureDate: departure,
   returnDate: activeTab === "round-trip" ? returnDate : undefined,
 
@@ -184,11 +317,19 @@ const [cabin, setCabin] = useState("economy");
     }
   }
 
-  const swapLocations = () => {
-    const temp = from;
-    setFrom(to);
-    setTo(temp);
-  };
+ const swapLocations = () => {
+  const tempFrom = from;
+  const tempFromCode = selectedFromCode;
+
+  setFrom(to);
+  setSelectedFromCode(selectedToCode);
+
+  setTo(tempFrom);
+  setSelectedToCode(tempFromCode);
+
+  setShowFromAirports(false);
+  setShowToAirports(false);
+};
 
   const getCabinLabel = () => {
     return (
@@ -383,10 +524,21 @@ const [cabin, setCabin] = useState("economy");
                         className="shrink-0 text-blue-400"
                       />
 
-                      <input
-                        value={from}
-                        onChange={(e) => setFrom(e.target.value)}
-                        placeholder="City or Airport"
+                     <input
+  value={from}
+  onChange={(e) => {
+    const value = e.target.value;
+
+    setFrom(value);
+    setSelectedFromCode("");
+    setShowFromAirports(true);
+  }}
+  onFocus={() => {
+    if (from.length >= 2) {
+      setShowFromAirports(true);
+    }
+  }}
+  placeholder="City or Airport"
                         className="
                           min-w-0
                           w-full
@@ -404,7 +556,12 @@ const [cabin, setCabin] = useState("economy");
                       {from && (
                         <button
                           type="button"
-                          onClick={() => setFrom("")}
+                          onClick={() => {
+  setFrom("");
+  setSelectedFromCode("");
+  setFromAirports([]);
+  setShowFromAirports(false);
+}}
                           className="
                             shrink-0
                             rounded-full
@@ -419,8 +576,72 @@ const [cabin, setCabin] = useState("economy");
                           <X size={15} />
                         </button>
                       )}
+
+
+
                     </div>
                   </div>
+
+{showFromAirports &&
+  fromAirports.length > 0 && (
+    <div
+      className="
+        absolute
+        left-0
+        right-0
+        top-[82px]
+        z-50
+        max-h-72
+        overflow-y-auto
+        rounded-xl
+        border
+        border-slate-700
+        bg-slate-900
+        shadow-2xl
+      "
+    >
+      {fromAirports.map((airport) => (
+        <button
+          key={`${airport.airport_code}-${airport.city}`}
+          type="button"
+          onClick={() => {
+            setFrom(airport.display_name);
+            setSelectedFromCode(
+              airport.airport_code
+            );
+            setShowFromAirports(false);
+          }}
+          className="
+            w-full
+            px-4
+            py-3
+            text-left
+            transition
+            hover:bg-slate-800
+          "
+        >
+          <div className="flex items-center gap-3">
+            <MapPin
+              size={16}
+              className="text-blue-400 shrink-0"
+            />
+
+            <div className="min-w-0">
+              <p className="font-semibold text-white">
+                {airport.display_name}
+              </p>
+
+              <p className="text-xs text-slate-400 truncate">
+                {airport.airport_name}
+                {" • "}
+                {airport.country}
+              </p>
+            </div>
+          </div>
+        </button>
+      ))}
+    </div>
+  )}
 
                   {/* =================================================
                       SWAP BUTTON
@@ -458,7 +679,7 @@ const [cabin, setCabin] = useState("economy");
                     TO
                 ==================================================== */}
 
-                <div className="min-w-0 flex-[1.35]">
+                <div className="relative min-w-0 flex-[1.35]">
                   <div
                     className="
                       group
@@ -486,9 +707,20 @@ const [cabin, setCabin] = useState("economy");
                         className="shrink-0 text-indigo-400"
                       />
 
-                      <input
-                        value={to}
-                        onChange={(e) => setTo(e.target.value)}
+<input
+  value={to}
+  onChange={(e) => {
+    const value = e.target.value;
+
+    setTo(value);
+    setSelectedToCode("");
+    setShowToAirports(true);
+  }}
+  onFocus={() => {
+    if (to.length >= 2) {
+      setShowToAirports(true);
+    }
+  }}
                         placeholder="City or Airport"
                         className="
                           min-w-0
@@ -507,7 +739,12 @@ const [cabin, setCabin] = useState("economy");
                       {to && (
                         <button
                           type="button"
-                          onClick={() => setTo("")}
+                          onClick={() => {
+  setTo("");
+  setSelectedToCode("");
+  setToAirports([]);
+  setShowToAirports(false);
+}}
                           className="
                             shrink-0
                             rounded-full
@@ -525,6 +762,65 @@ const [cabin, setCabin] = useState("economy");
                     </div>
                   </div>
                 </div>
+
+{showToAirports &&
+  toAirports.length > 0 && (
+    <div
+      className="
+        absolute
+        left-0
+        right-0
+        top-[82px]
+        z-50
+        max-h-72
+        overflow-y-auto
+        rounded-xl
+        border
+        border-slate-700
+        bg-slate-900
+        shadow-2xl
+      "
+    >
+      {toAirports.map((airport) => (
+        <button
+          key={`${airport.airport_code}-${airport.city}`}
+          type="button"
+          onClick={() => {
+            setTo(airport.display_name);
+            setSelectedToCode(airport.airport_code);
+            setShowToAirports(false);
+          }}
+          className="
+            w-full
+            px-4
+            py-3
+            text-left
+            transition
+            hover:bg-slate-800
+          "
+        >
+          <div className="flex items-center gap-3">
+            <MapPin
+              size={16}
+              className="shrink-0 text-indigo-400"
+            />
+
+            <div className="min-w-0">
+              <p className="font-semibold text-white">
+                {airport.display_name}
+              </p>
+
+              <p className="truncate text-xs text-slate-400">
+                {airport.airport_name}
+                {" • "}
+                {airport.country}
+              </p>
+            </div>
+          </div>
+        </button>
+      ))}
+    </div>
+  )}
 
                 {/* ===================================================
                     DEPARTURE
