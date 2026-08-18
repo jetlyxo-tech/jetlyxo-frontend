@@ -10,11 +10,13 @@ function FlightSeatPageContent() {
   const router = useRouter();
   const params = useSearchParams();
 
-  const did = params.get("did") || "";
+ const did = params.get("did") || "";
 
-  const flightId = params.get("flightId") || "";
-  const searchId = params.get("searchId") || "";
-  const tId = params.get("tId") || "";
+ const isg = params.get("isg") === "true";
+
+ const flightId = params.get("flightId") || "";
+ const searchId = params.get("searchId") || "";
+ const tId = params.get("tId") || "";
 
   const airline = params.get("airline") || "";
   const duration = params.get("duration") || "";
@@ -521,6 +523,7 @@ function FlightSeatPageContent() {
               const query =
                 new URLSearchParams({
                   did,
+                  isg: String(isg),
                   flightId,
                   searchId,
                   tId,

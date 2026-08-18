@@ -105,6 +105,8 @@ function FlightMealPageContent() {
   ======================================================= */
 
   const did = params.get("did") || "";
+   
+  const isg = params.get("isg") === "true";
 
   const flightId =
     params.get("flightId") || "";
@@ -463,7 +465,8 @@ function FlightMealPageContent() {
            FLIGHT
         ===================== */
 
-        did,
+        did, 
+        isg: String(isg),
         flightId,
         searchId,
         tId,

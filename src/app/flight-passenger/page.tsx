@@ -232,12 +232,18 @@ console.log(
 );
 console.log("=========================================");
 
-      const did =
-        quote?.dId ??
-        quote?.data?.dId ??
-        quote?.data?.data?.dId ??
-        quote?.data?.data?.data?.dId ??
-        "";
+const did =
+  quote?.dId ??
+  quote?.data?.dId ??
+  quote?.data?.data?.dId ??
+  quote?.data?.data?.data?.dId ??
+  "";
+
+const isg =
+  quote?.data?.isg ??
+  quote?.data?.data?.isg ??
+  quote?.data?.data?.data?.isg ??
+  false;
 
       if (!did) {
         console.error(
@@ -266,6 +272,7 @@ console.log("=========================================");
         flightId,
         searchId,
         tId,
+        isg: String(isg),
         price,
         airline,
         duration,

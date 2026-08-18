@@ -15,7 +15,7 @@ function FlightBookPageContent() {
   ========================= */
 
   const did = params.get("did") || "";
-
+  const isg = params.get("isg") === "true";
   const airline = params.get("airline") || "";
   const duration = params.get("duration") || "";
   const price = params.get("price") || "0";
@@ -373,7 +373,7 @@ const displayTotal =
 
         gste: "",
 
-        isg: false,
+        isg,
 
         /* =========================
            CONTACT
