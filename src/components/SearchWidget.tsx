@@ -78,8 +78,10 @@ export default function SearchWidget({
   const [departure, setDeparture] = useState("");
   const [returnDate, setReturnDate] = useState("");
 
-  const [travellers, setTravellers] = useState(1);
-  const [cabin, setCabin] = useState("economy");
+const [adults, setAdults] = useState(1);
+const [children, setChildren] = useState(0);
+const [infants, setInfants] = useState(0);
+const [cabin, setCabin] = useState("economy");
 
   const [selectedFare, setSelectedFare] = useState("Regular");
 
@@ -146,19 +148,24 @@ export default function SearchWidget({
         }),
       }).catch(() => {});
 
-      const params = {
-        from,
-        to,
-        departureDate: departure,
-        returnDate: activeTab === "round-trip" ? returnDate : undefined,
-        travellers,
-        children: 0,
-        infants: 0,
-        cabin,
-        fareType: selectedFare,
-        tripType:
-          activeTab === "one-way" ? "ONE_WAY" : "ROUND_TRIP",
-      };
+    const params = {
+  from,
+  to,
+  departureDate: departure,
+  returnDate: activeTab === "round-trip" ? returnDate : undefined,
+
+  // Passenger counts
+  travellers: adults + children + infants,
+  adults,
+  children,
+  infants,
+
+  cabin,
+  fareType: selectedFare,
+
+  tripType:
+    activeTab === "one-way" ? "ONE_WAY" : "ROUND_TRIP",
+};
 
       const results = await searchFlights(params as any);
 
@@ -190,9 +197,29 @@ export default function SearchWidget({
     );
   };
 
-  const getTravellerLabel = () => {
-    return `${travellers} Traveller${travellers > 1 ? "s" : ""}`;
-  };
+ const getTravellerLabel = () => {
+  
+
+  if (children === 0 && infants === 0) {
+    return `${adults} Traveller${adults > 1 ? "s" : ""}`;
+  }
+
+  const parts: string[] = [];
+
+  if (adults > 0) {
+    parts.push(`${adults} Adult${adults > 1 ? "s" : ""}`);
+  }
+
+  if (children > 0) {
+    parts.push(`${children} Child${children > 1 ? "ren" : ""}`);
+  }
+
+  if (infants > 0) {
+    parts.push(`${infants} Infant${infants > 1 ? "s" : ""}`);
+  }
+
+  return parts.join(", ");
+};
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -721,100 +748,187 @@ export default function SearchWidget({
                           <h3 className="text-sm font-semibold text-white">
                             Travellers
                           </h3>
-
+ 
                           <p className="mt-1 text-xs text-slate-500">
                             Select the number of travellers
                           </p>
                         </div>
+{/* ADULTS */}
+<div className="flex items-center justify-between rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+  <div className="flex items-center gap-3">
+    <div className="rounded-lg bg-blue-500/10 p-2">
+      <Users
+        size={18}
+        className="text-blue-400"
+      />
+    </div>
 
-                        <div className="flex items-center justify-between rounded-xl border border-slate-700 bg-slate-800/70 p-3">
-                          <div className="flex items-center gap-3">
-                            <div className="rounded-lg bg-blue-500/10 p-2">
-                              <Users
-                                size={18}
-                                className="text-blue-400"
-                              />
-                            </div>
+    <div>
+      <p className="text-sm font-medium text-white">
+        Adults
+      </p>
+      <p className="text-xs text-slate-500">
+        12+ years
+      </p>
+    </div>
+  </div>
 
-                            <div>
-                              <p className="text-sm font-medium text-white">
-                                Travellers
-                              </p>
+  <div className="flex items-center gap-2">
+    <button
+      type="button"
+      disabled={adults <= 1}
+      onClick={() =>
+        setAdults(Math.max(1, adults - 1))
+      }
+      className="
+        flex h-8 w-8 items-center justify-center
+        rounded-full border border-slate-600
+        text-white transition
+        hover:border-blue-500 hover:bg-blue-500/10
+        disabled:cursor-not-allowed disabled:opacity-40
+      "
+    >
+      −
+    </button>
 
-                              <p className="text-xs text-slate-500">
-                                Adults
-                              </p>
-                            </div>
-                          </div>
+    <span className="w-6 text-center text-sm font-semibold text-white">
+      {adults}
+    </span>
 
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              disabled={travellers <= 1}
-                              onClick={() =>
-                                setTravellers(
-                                  Math.max(
-                                    1,
-                                    travellers - 1
-                                  )
-                                )
-                              }
-                              className="
-                                flex
-                                h-8
-                                w-8
-                                items-center
-                                justify-center
-                                rounded-full
-                                border
-                                border-slate-600
-                                text-white
-                                transition
-                                hover:border-blue-500
-                                hover:bg-blue-500/10
-                                disabled:cursor-not-allowed
-                                disabled:opacity-40
-                              "
-                            >
-                              −
-                            </button>
+    <button
+      type="button"
+      disabled={adults >= 6}
+      onClick={() =>
+        setAdults(Math.min(6, adults + 1))
+      }
+      className="
+        flex h-8 w-8 items-center justify-center
+        rounded-full border border-slate-600
+        text-white transition
+        hover:border-blue-500 hover:bg-blue-500/10
+        disabled:cursor-not-allowed disabled:opacity-40
+      "
+    >
+      +
+    </button>
+  </div>
+</div>
 
-                            <span className="w-6 text-center text-sm font-semibold text-white">
-                              {travellers}
-                            </span>
+{/* CHILDREN */}
+<div className="mt-3 flex items-center justify-between rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+  <div className="flex items-center gap-3">
+    <div className="rounded-lg bg-indigo-500/10 p-2 text-lg">
+      👦
+    </div>
 
-                            <button
-                              type="button"
-                              disabled={travellers >= 6}
-                              onClick={() =>
-                                setTravellers(
-                                  Math.min(
-                                    6,
-                                    travellers + 1
-                                  )
-                                )
-                              }
-                              className="
-                                flex
-                                h-8
-                                w-8
-                                items-center
-                                justify-center
-                                rounded-full
-                                border
-                                border-slate-600
-                                text-white
-                                transition
-                                hover:border-blue-500
-                                hover:bg-blue-500/10
-                                disabled:cursor-not-allowed
-                                disabled:opacity-40
-                              "
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
+    <div>
+      <p className="text-sm font-medium text-white">
+        Children
+      </p>
+      <p className="text-xs text-slate-500">
+        2–11 years
+      </p>
+    </div>
+  </div>
+
+  <div className="flex items-center gap-2">
+    <button
+      type="button"
+      disabled={children <= 0}
+      onClick={() =>
+        setChildren(Math.max(0, children - 1))
+      }
+      className="
+        flex h-8 w-8 items-center justify-center
+        rounded-full border border-slate-600
+        text-white transition
+        hover:border-blue-500 hover:bg-blue-500/10
+        disabled:cursor-not-allowed disabled:opacity-40
+      "
+    >
+      −
+    </button>
+
+    <span className="w-6 text-center text-sm font-semibold text-white">
+      {children}
+    </span>
+
+    <button
+      type="button"
+      disabled={children >= 6}
+      onClick={() =>
+        setChildren(Math.min(6, children + 1))
+      }
+      className="
+        flex h-8 w-8 items-center justify-center
+        rounded-full border border-slate-600
+        text-white transition
+        hover:border-blue-500 hover:bg-blue-500/10
+        disabled:cursor-not-allowed disabled:opacity-40
+      "
+    >
+      +
+    </button>
+  </div>
+</div>
+
+{/* INFANTS */}
+<div className="mt-3 flex items-center justify-between rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+  <div className="flex items-center gap-3">
+    <div className="rounded-lg bg-pink-500/10 p-2 text-lg">
+      👶
+    </div>
+
+    <div>
+      <p className="text-sm font-medium text-white">
+        Infants
+      </p>
+      <p className="text-xs text-slate-500">
+        Under 2 years
+      </p>
+    </div>
+  </div>
+
+  <div className="flex items-center gap-2">
+    <button
+      type="button"
+      disabled={infants <= 0}
+      onClick={() =>
+        setInfants(Math.max(0, infants - 1))
+      }
+      className="
+        flex h-8 w-8 items-center justify-center
+        rounded-full border border-slate-600
+        text-white transition
+        hover:border-blue-500 hover:bg-blue-500/10
+        disabled:cursor-not-allowed disabled:opacity-40
+      "
+    >
+      −
+    </button>
+
+    <span className="w-6 text-center text-sm font-semibold text-white">
+      {infants}
+    </span>
+
+    <button
+      type="button"
+      disabled={infants >= 6}
+      onClick={() =>
+        setInfants(Math.min(6, infants + 1))
+      }
+      className="
+        flex h-8 w-8 items-center justify-center
+        rounded-full border border-slate-600
+        text-white transition
+        hover:border-blue-500 hover:bg-blue-500/10
+        disabled:cursor-not-allowed disabled:opacity-40
+      "
+    >
+      +
+    </button>
+  </div>
+</div>
 
                         <div className="mt-4">
                           <label className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -1199,7 +1313,8 @@ export default function SearchWidget({
                   </div>
 
                   <div>
-                    <h3 className="text-sm font-semibold text-white">
+                    <h3 className="text-sm 
+font-semibold text-white">
                       Secure Payments
                     </h3>
 
