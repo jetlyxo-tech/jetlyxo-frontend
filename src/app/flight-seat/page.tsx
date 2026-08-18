@@ -108,6 +108,18 @@ function FlightSeatPageContent() {
         "Booking Detail ID (dId) not found."
       );
 
+console.log(
+  "========== SELECTED BONTON SEAT =========="
+);
+
+console.log(
+  JSON.stringify(selectedSeat, null, 2)
+);
+
+console.log(
+  "=========================================="
+);
+
       router.push("/");
 
       return;
