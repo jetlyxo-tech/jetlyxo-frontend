@@ -1,6 +1,12 @@
 ﻿"use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import {
+  useState,
+  useMemo,
+  useEffect,
+  useCallback,
+  useRef,
+} from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -308,9 +314,7 @@ export default function FlightResults({
   const [hasMoreFlights, setHasMoreFlights] =
   useState(true);
 
-/* ---------------------------------------------
-   EFFECTS
---------------------------------------------- */
+  const nextRequestInProgress = useRef(false);
 
   useEffect(() => {
   setFlightList(flights);
@@ -429,12 +433,21 @@ const loadNextFlights = useCallback(async () => {
     return;
   }
 
-  if (loadingMore || !hasMoreFlights) {
-    return;
-  }
+ if (loadingMore || !hasMoreFlights) {
+  return;
+}
 
-  try {
-    setLoadingMore(true);
+if (nextRequestInProgress.current) {
+  console.log(
+    "Next request already in progress — skipping duplicate call"
+  );
+  return;
+}
+
+nextRequestInProgress.current = true;
+
+try {
+  setLoadingMore(true);
 
     const nextFilters = buildNextFilters();
 
@@ -515,8 +528,9 @@ const loadNextFlights = useCallback(async () => {
         : "Unable to load more flights"
     );
   } finally {
-    setLoadingMore(false);
-  }
+  setLoadingMore(false);
+  nextRequestInProgress.current = false;
+}
 }, [
   searchStid,
   nextSkip,
@@ -599,11 +613,20 @@ const applyProviderFilters = useCallback(
   } = {}) => {
     if (!searchStid) {
       toast.error("Flight search session is missing");
-      return;
-    }
+       return;
+}
 
-    try {
-      setLoadingMore(true);
+    if (nextRequestInProgress.current) {
+      console.log(
+       "Next request already in progress — skipping duplicate call"
+  );
+       return;
+}
+
+nextRequestInProgress.current = true;
+
+try {
+  setLoadingMore(true);
 
       const nextFilters = buildNextFilters({
         nextSelectedAirlines,
@@ -660,8 +683,9 @@ const applyProviderFilters = useCallback(
           : "Unable to apply flight filters"
       );
     } finally {
-      setLoadingMore(false);
-    }
+  setLoadingMore(false);
+  nextRequestInProgress.current = false;
+}
   },
   [
     searchStid,
@@ -858,20 +882,36 @@ const applyProviderFilters = useCallback(
             Price Range
           </h4>
 
-          <input
-            type="range"
-            min={0}
-            max={sliderMax}
-            value={priceLimit}
-            step={100}
-           onChange={(e) => {
-  const value = Number(e.target.value);
-  setPriceLimit(value);
-  applyProviderFilters({
-    nextPriceLimit: value,
-  });
-}}        className="w-full accent-cyan-500"
-          />
+<input
+  type="range"
+  min={0}
+  max={sliderMax}
+  value={priceLimit}
+  step={100}
+  onChange={(e) => {
+    const value = Number(e.target.value);
+    setPriceLimit(value);
+  }}
+  onMouseUp={(e) => {
+    const value = Number(
+      e.currentTarget.value
+    );
+
+    applyProviderFilters({
+      nextPriceLimit: value,
+    });
+  }}
+  onTouchEnd={(e) => {
+    const value = Number(
+      e.currentTarget.value
+    );
+
+    applyProviderFilters({
+      nextPriceLimit: value,
+    });
+  }}
+  className="w-full accent-cyan-500"
+/>     
 
           <div className="flex justify-between mt-3 text-sm text-white/60">
 
