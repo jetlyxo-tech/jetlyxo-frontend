@@ -56,19 +56,22 @@ export function mapBookingsForAI(
 ): AIInputBooking[] {
   return bookings.map((booking) => ({
     source:
-  booking.flight?.from ??
-  booking.bus?.fromCity ??
-  booking.train?.fromCity ??
-  "",
+      booking.flight?.from ??
+      booking.bus?.fromCity ??
+      booking.train?.fromCity ??
+      "",
 
-  destination:
-  booking.flight?.to ??
-  booking.bus?.toCity ??
-  booking.train?.toCity ??
-  "",
+    destination:
+      booking.flight?.to ??
+      booking.bus?.toCity ??
+      booking.train?.toCity ??
+      "",
 
     price: booking.totalPrice,
 
-    type: booking.bookingType,
+    type: booking.bookingType.toLowerCase() as
+      | "flight"
+      | "bus"
+      | "train",
   }));
 }
