@@ -2,7 +2,10 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getBookingById } from "@/lib/api";
+import {
+  getBookingById,
+  downloadBookingTicket,
+} from "@/lib/api";
 
 
 function Card({
@@ -29,6 +32,7 @@ function BookingSuccessContent() {
   const [booking, setBooking] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     const bookingId = searchParams.get("bookingId");
@@ -183,13 +187,6 @@ const status =
   flightData?.status ||
   "CONFIRMED";
 
-const ticketUrl =
-  flightData?.pdfUrl ??
-  flightData?.ticketUrl ??
-  flightData?.eTicketUrl ??
-  flightData?.pdf ??
-  flightData?.ticket ??
-  "";
 
     function formatDate(date: string) {
       if (!date) return "-";
@@ -372,16 +369,37 @@ const ticketUrl =
         <div className="grid md:grid-cols-4 gap-4 mt-10">
 
           <button
-            disabled={!ticketUrl}
-            onClick={() => {
-              if (ticketUrl) {
-                window.open(ticketUrl, "_blank");
-              }
-            }}
-            className="bg-blue-600 hover:bg-blue-700 py-3 rounded-xl font-semibold disabled:opacity-50"
-          >
-            📄 Download Ticket
-          </button>
+  disabled={downloading}
+  onClick={async () => {
+    try {
+      setDownloading(true);
+
+      const blob = await downloadBookingTicket(
+        Number(bookingData.id)
+      );
+
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `JetlyXO_Ticket_${bookingData.id}.pdf`;
+
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Ticket download failed:", error);
+      alert("Unable to download ticket. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
+  }}
+  className="bg-blue-600 hover:bg-blue-700 py-3 rounded-xl font-semibold disabled:opacity-50"
+>
+  {downloading ? "Downloading..." : "📄 Download Ticket"}
+</button>
 
           <button
             onClick={() => router.push("/my-bookings")}
