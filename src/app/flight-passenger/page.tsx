@@ -14,7 +14,11 @@ function FlightPassengerPageContent() {
   const flightId = params.get("flightId") ?? "";
   const searchId = params.get("searchId") ?? "";
   const tId = params.get("tId") ?? "";
-  const tripType = params.get("tripType") ?? "ONEWAY";
+  const rawTripType =
+  params.get("tripType") ?? "ONE_WAY";
+
+  const tripType =
+  rawTripType.toUpperCase().replace("-", "_");
   const returnFlightId = params.get("returnFlightId") ?? "";
   const returnTId = params.get("returnTId") ?? "";
 
@@ -218,20 +222,21 @@ function FlightPassengerPageContent() {
          FARE QUOTE
       ========================= */
 
-      const quote = await fareQuote({
-        id: flightId,
-        rId:
-         tripType === "ROUND_TRIP"
-           ? returnFlightId
-           : "",
-        sId: searchId,
-        owtId: tId,
-        rwtId:
-          tripType === "ROUND_TRIP"
-            ? returnTId
-            : "",
-      });
+const quote = await fareQuote({
+  id: flightId,
+  searchId,
+  tId,
 
+  returnId:
+    tripType === "ROUND_TRIP"
+      ? returnFlightId
+      : undefined,
+
+  returnTId:
+    tripType === "ROUND_TRIP"
+      ? returnTId
+      : undefined,
+});
       console.log("========== FRONTEND FARE QUOTE ==========");
 console.log(JSON.stringify(quote, null, 2));
 console.log("dId:", quote?.dId);
@@ -278,41 +283,63 @@ const isg =
          GO TO SEAT SELECTION
       ========================= */
 
-      const query = new URLSearchParams({
-        did,
-        flightId,
-        searchId,
-        tId,
-        isg: String(isg),
-        price,
-        airline,
-        duration,
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        age,
-        phone: normalizedPhone,
-        phoneCountryCode,
-        email: normalizedEmail,
-        title,
-        dob,
-        residence,
-        pan:
-          residence === "IN"
-            ? normalizedPan
-            : "",
-        passportNumber:
-          residence !== "IN"
-            ? normalizedPassport
-            : "",
-        passportExpiry:
-          residence !== "IN"
-            ? passportExpiry
-            : "",
-        passportCountry:
-          residence !== "IN"
-            ? normalizedPassportCountry
-            : "",
-      });
+const query = new URLSearchParams({
+  did,
+  flightId,
+  searchId,
+  tId,
+
+  tripType,
+
+  returnFlightId:
+    tripType === "ROUND_TRIP"
+      ? returnFlightId
+      : "",
+
+  returnTId:
+    tripType === "ROUND_TRIP"
+      ? returnTId
+      : "",
+
+  isg: String(isg),
+
+  price,
+  airline,
+  duration,
+
+  firstName: firstName.trim(),
+  lastName: lastName.trim(),
+  age,
+
+  phone: normalizedPhone,
+  phoneCountryCode,
+
+  email: normalizedEmail,
+  title,
+  dob,
+
+  residence,
+
+  pan:
+    residence === "IN"
+      ? normalizedPan
+      : "",
+
+  passportNumber:
+    residence !== "IN"
+      ? normalizedPassport
+      : "",
+
+  passportExpiry:
+    residence !== "IN"
+      ? passportExpiry
+      : "",
+
+  passportCountry:
+    residence !== "IN"
+      ? normalizedPassportCountry
+      : "",
+});
 
       router.push(`/flight-seat?${query.toString()}`);
     } catch (err: any) {

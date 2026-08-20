@@ -501,6 +501,7 @@ export async function bookFlight(
 /* =========================================================
    FARE QUOTE
 ========================================================= */
+
 export interface FareQuoteResponse {
   dId?: string;
 
@@ -517,29 +518,49 @@ export interface FareQuoteResponse {
 
   [key: string]: unknown;
 }
- 
+
 export async function fareQuote(
   data: {
     id: string | number;
-    rId?: string | number;
-    sId: string;
-    owtId: string;
-    rwtId?: string;
+    searchId: string;
+    tId: string;
+    returnId?: string | number;
+    returnTId?: string;
   }
 ): Promise<any> {
   try {
+    console.log(
+      "========== FARE QUOTE REQUEST =========="
+    );
+    console.log(
+      JSON.stringify(data, null, 2)
+    );
+    console.log(
+      "========================================"
+    );
+
     const response = await fetchFlightApi<any>(
       "/flights/fare-quote",
       data
     );
 
-    console.log("========== FARE QUOTE API ==========");
-    console.log("Full Fare Quote Response:", response);
-    console.log("====================================");
+    console.log(
+      "========== FARE QUOTE API RESPONSE =========="
+    );
+    console.log(
+      JSON.stringify(response, null, 2)
+    );
+    console.log(
+      "============================================="
+    );
 
     return response?.data ?? null;
+
   } catch (error) {
-    console.error("Fare Quote Error:", error);
+    console.error(
+      "Fare Quote Error:",
+      error
+    );
 
     throw new Error(
       error instanceof Error
