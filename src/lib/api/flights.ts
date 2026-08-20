@@ -521,8 +521,10 @@ export interface FareQuoteResponse {
 export async function fareQuote(
   data: {
     id: string | number;
-    searchId: string;
-    tId: string;
+    rId?: string | number;
+    sId: string;
+    owtId: string;
+    rwtId?: string;
   }
 ): Promise<any> {
   try {

@@ -213,6 +213,8 @@ function BookNowButton({
   searchId,
   tId,
   tripType,
+  returnFlightId,
+  returnTId,
 }: {
   priceNumber: number;
   airline: string;
@@ -221,6 +223,8 @@ function BookNowButton({
   searchId?: string;
   tId?: string;
   tripType?: string;
+  returnFlightId?: string | number;
+  returnTId?: string;
 }) {
   const router = useRouter();
 
@@ -233,10 +237,17 @@ function BookNowButton({
     const url =
       `/flight-passenger?flightId=${encodeURIComponent(
         String(flightId)
+    )}` +
+       `&searchId=${encodeURIComponent(searchId ?? "")}` +
+       `&tId=${encodeURIComponent(tId ?? "")}` +
+       `&price=${priceNumber}` +
+       `&tripType=${encodeURIComponent(tripType ?? "ONEWAY")}` +
+      `&returnFlightId=${encodeURIComponent(
+        String(returnFlightId ?? "")
       )}` +
-      `&searchId=${encodeURIComponent(searchId ?? "")}` +
-      `&tId=${encodeURIComponent(tId ?? "")}` +
-      `&price=${priceNumber}` +
+      `&returnTId=${encodeURIComponent(
+        returnTId ?? ""
+      )}` +
       `&airline=${encodeURIComponent(airline)}` +
       `&duration=${encodeURIComponent(duration)}`;
 
@@ -573,7 +584,8 @@ console.log(
             duration: f.returnFlight.duration,
             stops: f.returnFlight.stops,
             price: f.returnFlight.price,
-          }
+            tId: f.returnFlight.tId,
+        }
         : null,
 
       totalPrice: f.totalPrice,
@@ -1392,6 +1404,8 @@ try {
   searchId={flight.searchId}
   tId={flight.tId}
   tripType={flight.tripType}
+  returnFlightId={flight.returnFlight?.id}
+  returnTId={(flight as any).returnFlight?.tId}
 />
               </div>
             </motion.div>

@@ -14,6 +14,9 @@ function FlightPassengerPageContent() {
   const flightId = params.get("flightId") ?? "";
   const searchId = params.get("searchId") ?? "";
   const tId = params.get("tId") ?? "";
+  const tripType = params.get("tripType") ?? "ONEWAY";
+  const returnFlightId = params.get("returnFlightId") ?? "";
+  const returnTId = params.get("returnTId") ?? "";
 
   const airline = params.get("airline") || "Flight";
   const duration = params.get("duration") || "";
@@ -217,8 +220,16 @@ function FlightPassengerPageContent() {
 
       const quote = await fareQuote({
         id: flightId,
-        searchId,
-        tId,
+        rId:
+         tripType === "ROUND_TRIP"
+           ? returnFlightId
+           : "",
+        sId: searchId,
+        owtId: tId,
+        rwtId:
+          tripType === "ROUND_TRIP"
+            ? returnTId
+            : "",
       });
 
       console.log("========== FRONTEND FARE QUOTE ==========");
