@@ -70,6 +70,7 @@ type NormalizedFlight = {
 
   returnFlight?: {
     id?: string | number;
+    tId?: string;
     airline?: string;
     airlineCode?: string;
     from?: string;
@@ -177,6 +178,7 @@ returnFlight:
   rawFlight.returnFlight?.to
     ? {
         id: rawFlight.returnFlight.id,
+        tId: rawFlight.returnFlight.tId,
         airline: rawFlight.returnFlight.airline,
         airlineCode: rawFlight.returnFlight.airlineCode,
         from: rawFlight.returnFlight.from,
@@ -1405,7 +1407,7 @@ try {
   tId={flight.tId}
   tripType={flight.tripType}
   returnFlightId={flight.returnFlight?.id}
-  returnTId={(flight as any).returnFlight?.tId}
+  returnTId={flight.returnFlight?.tId}
 />
               </div>
             </motion.div>
