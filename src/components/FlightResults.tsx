@@ -58,6 +58,26 @@ type NormalizedFlight = {
   dep: string;
   stops: string;
   seats: number | null;
+
+  // LAYOVER DATA
+  segments?: {
+    from: string;
+    to: string;
+    departure?: string;
+    arrival?: string;
+    duration?: string;
+    flightNumber?: string;
+    airline?: string;
+    airlineCode?: string;
+    layoverMinutes?: number;
+    layoverAirport?: string;
+    layoverLocation?: string;
+  }[];
+
+  layoverMinutes?: number;
+  layoverAirport?: string;
+  layoverLocation?: string;
+
   cabin: string;
   fareType: string;
   badge?: string;
@@ -84,6 +104,20 @@ type NormalizedFlight = {
     cabin?: string;
     flightNumber?: string;
     totalPrice?: number;
+
+    segments?: {
+      from: string;
+      to: string;
+      departure?: string;
+      arrival?: string;
+      duration?: string;
+      flightNumber?: string;
+      airline?: string;
+      airlineCode?: string;
+      layoverMinutes?: number;
+      layoverAirport?: string;
+      layoverLocation?: string;
+    }[];
   };
 };
 
@@ -111,6 +145,25 @@ function parseDuration(duration: string) {
   );
 }
 
+function formatLayover(minutes?: number) {
+  if (!minutes || minutes <= 0) {
+    return "";
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+
+  if (hours > 0 && mins > 0) {
+    return `${hours}h ${mins}m`;
+  }
+
+  if (hours > 0) {
+    return `${hours}h`;
+  }
+
+  return `${mins}m`;
+}
+
 function normalizeFlight(
   flight: Flight,
   index: number
@@ -118,6 +171,68 @@ function normalizeFlight(
   const price = Number(flight.price ?? 0);
 
   const rawFlight = flight as any;
+const rawSegments =
+  rawFlight.disseg ??
+  rawFlight.fltseg ??
+  rawFlight.segments ??
+  [];
+
+console.log(
+  "========== BONTON SEGMENTS ==========",
+  {
+    id: rawFlight.id,
+    disseg: rawFlight.disseg,
+    fltseg: rawFlight.fltseg,
+  }
+);
+
+const segments = Array.isArray(rawSegments)
+  ? rawSegments.map((segment: any) => ({
+      from:
+        segment.orgctco ??
+        segment.orgapco ??
+        segment.from ??
+        "",
+      to:
+        segment.desctco ??
+        segment.desapco ??
+        segment.to ??
+        "",
+      departure:
+        segment.deptm ??
+        segment.departure ??
+        undefined,
+      arrival:
+        segment.arrtm ??
+        segment.arrival ??
+        undefined,
+      duration:
+        segment.dur ??
+        segment.duration ??
+        undefined,
+      flightNumber:
+        segment.fltno ??
+        segment.flightNumber ??
+        undefined,
+      airline:
+        segment.airna ??
+        segment.airline ??
+        undefined,
+      airlineCode:
+        segment.airco ??
+        segment.airlineCode ??
+        undefined,
+      layoverMinutes:
+        Number(segment.laymin ?? 0) || 0,
+      layoverAirport:
+        segment.lay ??
+        undefined,
+      layoverLocation:
+        segment.layat ??
+        undefined,
+    }))
+  : [];
+
 
 const totalPrice =
   rawFlight.tripType === "ROUND_TRIP"
@@ -145,14 +260,44 @@ const totalPrice =
 
     duration: flight.duration || "N/A",
 
-    dep: flight.departure || "--:--",
+        dep: flight.departure || "--:--",
 
     stops:
       typeof flight.stops === "number"
         ? flight.stops === 0
           ? "Non-stop"
           : `${flight.stops} Stop`
+        : segments.length > 1
+        ? `${segments.length - 1} Stop`
         : "Non-stop",
+
+    // LAYOVER DATA
+    segments,
+
+    layoverMinutes:
+      segments.length > 1
+        ? segments
+            .slice(0, -1)
+            .reduce(
+              (total: number, segment: any) =>
+                total + Number(segment.layoverMinutes ?? 0),
+              0
+            )
+        : 0,
+
+    layoverAirport:
+      segments.find(
+        (segment: any) =>
+          Number(segment.layoverMinutes ?? 0) > 0
+      )?.layoverAirport,
+
+    layoverLocation:
+      segments.find(
+        (segment: any) =>
+          Number(segment.layoverMinutes ?? 0) > 0
+      )?.layoverLocation,
+
+      
 
     seats: flight.seats ?? null,
 
@@ -187,10 +332,78 @@ returnFlight:
         arrival: rawFlight.returnFlight.arrival,
         duration: rawFlight.returnFlight.duration,
         stops: rawFlight.returnFlight.stops,
-        price: Number(rawFlight.returnFlight.price ?? 0),
+        price: Number(
+          rawFlight.returnFlight.price ?? 0
+        ),
         seats: rawFlight.returnFlight.seats,
         cabin: rawFlight.returnFlight.cabin,
-        flightNumber: rawFlight.returnFlight.flightNumber,
+        flightNumber:
+          rawFlight.returnFlight.flightNumber,
+
+        segments:
+          Array.isArray(
+            rawFlight.returnFlight?.disseg
+          )
+            ? rawFlight.returnFlight.disseg.map(
+                (segment: any) => ({
+                  from:
+                    segment.orgctco ??
+                    segment.orgapco ??
+                    segment.from ??
+                    "",
+
+                  to:
+                    segment.desctco ??
+                    segment.desapco ??
+                    segment.to ??
+                    "",
+
+                  departure:
+                    segment.deptm ??
+                    segment.departure ??
+                    undefined,
+
+                  arrival:
+                    segment.arrtm ??
+                    segment.arrival ??
+                    undefined,
+
+                  duration:
+                    segment.dur ??
+                    segment.duration ??
+                    undefined,
+
+                  flightNumber:
+                    segment.fltno ??
+                    segment.flightNumber ??
+                    undefined,
+
+                  airline:
+                    segment.airna ??
+                    segment.airline ??
+                    undefined,
+
+                  airlineCode:
+                    segment.airco ??
+                    segment.airlineCode ??
+                    undefined,
+
+                  layoverMinutes:
+                    Number(
+                      segment.laymin ?? 0
+                    ) || 0,
+
+                  layoverAirport:
+                    segment.lay ??
+                    undefined,
+
+                  layoverLocation:
+                    segment.layat ??
+                    undefined,
+                })
+              )
+            : [],
+
         totalPrice: Number(
           rawFlight.returnFlight.totalPrice ??
           rawFlight.returnFlight.price ??
@@ -1286,8 +1499,68 @@ try {
   </div>
 
   <p className="text-sm text-white/70 mt-1">
-    {flight.duration} • {flight.stops}
-  </p>
+  {flight.duration} • {flight.stops}
+</p>
+
+{/* LAYOVER DETAILS */}
+{flight.segments &&
+  flight.segments.length > 1 && (
+    <div className="mt-3 space-y-2">
+      {flight.segments
+        .slice(0, -1)
+        .map((segment, index) => {
+          const nextSegment =
+            flight.segments?.[index + 1];
+
+          const layoverMinutes =
+            nextSegment?.layoverMinutes ??
+            segment.layoverMinutes ??
+            0;
+
+          const layoverAirport =
+            nextSegment?.from ||
+            segment.layoverAirport;
+
+          const layoverLocation =
+            segment.layoverLocation;
+
+          if (!layoverMinutes && !layoverAirport) {
+            return null;
+          }
+
+          return (
+            <div
+              key={index}
+              className="rounded-xl bg-white/5 border border-white/10 px-4 py-3"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-yellow-400">
+                  ⏱
+                </span>
+
+                <span className="text-sm font-medium text-white">
+                  {layoverAirport
+                    ? `Layover at ${layoverAirport}`
+                    : "Layover"}
+                </span>
+              </div>
+
+              {layoverLocation && (
+                <p className="text-xs text-white/50 mt-1">
+                  {layoverLocation}
+                </p>
+              )}
+
+              {layoverMinutes > 0 && (
+                <p className="text-xs text-cyan-300 mt-1">
+                  {formatLayover(layoverMinutes)}
+                </p>
+              )}
+            </div>
+          );
+        })}
+    </div>
+  )}
 
 </div>
 
@@ -1351,6 +1624,65 @@ try {
         ? "Non-stop"
         : `${flight.returnFlight.stops ?? 0} Stop`}
     </p>
+
+{flight.returnFlight.segments &&
+  flight.returnFlight.segments.length > 1 && (
+    <div className="mt-3 space-y-2">
+      {flight.returnFlight.segments
+        .slice(0, -1)
+        .map((segment, index) => {
+          const nextSegment =
+            flight.returnFlight?.segments?.[index + 1];
+
+          const layoverMinutes =
+            nextSegment?.layoverMinutes ??
+            segment.layoverMinutes ??
+            0;
+
+          const layoverAirport =
+            nextSegment?.from ||
+            segment.layoverAirport;
+
+          const layoverLocation =
+            segment.layoverLocation;
+
+          if (!layoverMinutes && !layoverAirport) {
+            return null;
+          }
+
+          return (
+            <div
+              key={index}
+              className="rounded-xl bg-white/5 border border-white/10 px-4 py-3"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-yellow-400">
+                  ⏱
+                </span>
+
+                <span className="text-sm font-medium text-white">
+                  {layoverAirport
+                    ? `Layover at ${layoverAirport}`
+                    : "Layover"}
+                </span>
+              </div>
+
+              {layoverLocation && (
+                <p className="text-xs text-white/50 mt-1">
+                  {layoverLocation}
+                </p>
+              )}
+
+              {layoverMinutes > 0 && (
+                <p className="text-xs text-cyan-300 mt-1">
+                  {formatLayover(layoverMinutes)}
+                </p>
+              )}
+            </div>
+          );
+        })}
+    </div>
+  )}
 
   </div>
 )}

@@ -639,116 +639,6 @@ function AmendmentTimeline({
   );
 }
 
-/* =========================================================
-   API LOG PANEL
-========================================================= */
-
-function ApiDetailsPanel({
-  logs,
-}: {
-  logs: ApiOperationLog[];
-}) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <section className="bg-slate-900/70 border border-white/10 rounded-2xl overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        className="w-full flex items-center justify-between p-5 sm:p-6 text-left hover:bg-white/5 transition-colors"
-      >
-        <div>
-          <h2 className="text-lg font-semibold text-white">
-            API Details
-          </h2>
-
-          <p className="text-sm text-white/60 mt-1">
-            Safe request/response log for JetlyXo → EC2 → Bonton
-          </p>
-        </div>
-
-        {open ? (
-          <ChevronUp className="w-5 h-5 text-white/60" />
-        ) : (
-          <ChevronDown className="w-5 h-5 text-white/60" />
-        )}
-      </button>
-
-      {open && (
-        <div className="px-5 sm:px-6 pb-6 space-y-4 border-t border-white/10">
-          <div className="rounded-xl bg-slate-950/60 border border-white/10 p-4 text-sm text-white/70 space-y-1">
-            <p>JetlyXo Frontend</p>
-            <p className="pl-4">↓</p>
-            <p>EC2 Backend ({maskApiHost(API_URL)})</p>
-            <p className="pl-4">↓</p>
-            <p>Bonton API</p>
-            <p className="pl-4">↓</p>
-            <p>Response</p>
-          </div>
-
-          {logs.length === 0 ? (
-            <p className="text-sm text-white/50">
-              No API operations yet.
-            </p>
-          ) : (
-            <div className="space-y-3 max-h-[32rem] overflow-y-auto">
-              {logs.map((log) => (
-                <div
-                  key={log.id}
-                  className="rounded-xl bg-slate-950/60 border border-white/10 p-4"
-                >
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <span className="font-semibold text-white">
-                      {log.operation}
-                    </span>
-
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full ${
-                        log.success
-                          ? "bg-emerald-500/20 text-emerald-300"
-                          : "bg-red-500/20 text-red-300"
-                      }`}
-                    >
-                      {log.success
-                        ? "Success"
-                        : "Failed"}
-                    </span>
-
-                    {log.httpStatus !== undefined && (
-                      <span className="text-xs text-white/50">
-                        HTTP {log.httpStatus}
-                      </span>
-                    )}
-
-                    <span className="text-xs text-white/40 ml-auto">
-                      {log.timestamp}
-                    </span>
-                  </div>
-
-                  {log.error && (
-                    <p className="text-sm text-red-300 mb-2">
-                      {log.error}
-                    </p>
-                  )}
-
-                  {log.response !== undefined && (
-                    <pre className="text-xs text-white/70 overflow-x-auto whitespace-pre-wrap break-words">
-                      {JSON.stringify(
-                        sanitizeForDisplay(log.response),
-                        null,
-                        2
-                      )}
-                    </pre>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </section>
-  );
-}
 
 /* =========================================================
    MAIN PAGE
@@ -2734,13 +2624,6 @@ await handleRetrieveBooking(bontonBookingId);
           </div>
         </SectionCard>
 
-        {/* =================================================
-            API DETAILS
-        ================================================= */}
-
-        <ApiDetailsPanel
-          logs={apiLogs}
-        />
       </div>
     </div>
   );
