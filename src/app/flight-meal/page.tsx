@@ -38,11 +38,7 @@ function getAmount(value: unknown): number {
 }
 
 function getOptionName(item: SSROption): string {
-  return (
-    item.des ||
-    item.disnm ||
-    "SSR Option"
-  );
+  return item.des || item.disnm || "SSR Option";
 }
 
 function getCurrency(item: SSROption): string {
@@ -54,28 +50,6 @@ function getCurrency(item: SSROption): string {
 ========================================================= */
 
 function extractSSRSections(response: any): SSRSection[] {
-  /*
-    Bonton response from your Network tab:
-
-    {
-      success: true,
-      data: {
-        success: true,
-        message: "Success",
-        errorCode: null,
-        data: {
-          mealId: "...",
-          isssr: true,
-          dtl: [...]
-        }
-      }
-    }
-
-    Therefore the main path is:
-
-    response.data.data.dtl
-  */
-
   const possibleSections = [
     response?.data?.data?.dtl,
     response?.data?.dtl,
@@ -87,9 +61,7 @@ function extractSSRSections(response: any): SSRSection[] {
     (value) => Array.isArray(value)
   );
 
-  return Array.isArray(sections)
-    ? sections
-    : [];
+  return Array.isArray(sections) ? sections : [];
 }
 
 /* =========================================================
@@ -105,54 +77,51 @@ function FlightMealPageContent() {
   ======================================================= */
 
   const did = params.get("did") || "";
-   
+
   const isg = params.get("isg") === "true";
 
-  const flightId =
-    params.get("flightId") || "";
+  const flightId = params.get("flightId") || "";
 
-  const searchId =
-    params.get("searchId") || "";
+  const searchId = params.get("searchId") || "";
 
-  const tId =
-    params.get("tId") || "";
+  const tId = params.get("tId") || "";
 
-  const airline =
-    params.get("airline") || "";
+  const airline = params.get("airline") || "";
 
-  const duration =
-    params.get("duration") || "";
+  const duration = params.get("duration") || "";
 
-  const price =
-    params.get("price") || "";
+  const price = params.get("price") || "";
+
+  /* =======================================================
+     RETURN FLIGHT DETAILS
+  ======================================================= */
+
+  const returnFlightId =
+    params.get("returnFlightId") || "";
+
+  const returnTId =
+    params.get("returnTId") || "";
 
   /* =======================================================
      PASSENGER
   ======================================================= */
 
-  const firstName =
-    params.get("firstName") || "";
+  const firstName = params.get("firstName") || "";
 
-  const lastName =
-    params.get("lastName") || "";
+  const lastName = params.get("lastName") || "";
 
   const passengerName =
     `${firstName} ${lastName}`.trim();
 
-  const age =
-    params.get("age") || "";
+  const age = params.get("age") || "";
 
-  const phone =
-    params.get("phone") || "";
+  const phone = params.get("phone") || "";
 
-  const email =
-    params.get("email") || "";
+  const email = params.get("email") || "";
 
-  const title =
-    params.get("title") || "";
+  const title = params.get("title") || "";
 
-  const dob =
-    params.get("dob") || "";
+  const dob = params.get("dob") || "";
 
   /* =======================================================
      DOCUMENT DETAILS
@@ -161,8 +130,7 @@ function FlightMealPageContent() {
   const residence =
     params.get("residence") || "IN";
 
-  const pan =
-    params.get("pan") || "";
+  const pan = params.get("pan") || "";
 
   const phoneCountryCode =
     params.get("phoneCountryCode") || "+91";
@@ -177,7 +145,7 @@ function FlightMealPageContent() {
     params.get("passportCountry") || "";
 
   /* =======================================================
-     SEAT DETAILS
+     OUTBOUND SEAT DETAILS
   ======================================================= */
 
   const seatCode =
@@ -188,6 +156,22 @@ function FlightMealPageContent() {
 
   const seatPrice =
     params.get("seatPrice") || "0";
+
+  /* =======================================================
+     RETURN SEAT DETAILS
+     
+     For ONE-WAY these remain empty.
+     For ROUND-TRIP these contain the return seat.
+  ======================================================= */
+
+  const returnSeatCode =
+    params.get("returnSeatCode") || "";
+
+  const returnSeatNumber =
+    params.get("returnSeatNumber") || "";
+
+  const returnSeatPrice =
+    params.get("returnSeatPrice") || "0";
 
   /* =======================================================
      STATE
@@ -224,9 +208,10 @@ function FlightMealPageContent() {
           "🚀 REQUESTING BONTON SSR"
         );
 
+        console.log("dId:", did);
+
         console.log(
-          "dId:",
-          did
+          "=========================================="
         );
 
         const response = await meal({
@@ -241,12 +226,9 @@ function FlightMealPageContent() {
           "========== BONTON SSR RESPONSE =========="
         );
 
-        console.dir(
-          response,
-          {
-            depth: null,
-          }
-        );
+        console.dir(response, {
+          depth: null,
+        });
 
         console.log(
           "=========================================="
@@ -328,14 +310,13 @@ function FlightMealPageContent() {
     console.log(
       "=========================================="
     );
-  }, [mealResponse, detailSections]);
+  }, [
+    mealResponse,
+    detailSections,
+  ]);
 
   /* =======================================================
      MEAL SECTION
-
-     Bonton uses:
-
-     typ: "MealDynamic"
   ======================================================= */
 
   const mealSection =
@@ -459,32 +440,68 @@ function FlightMealPageContent() {
   ======================================================= */
 
   const handleContinue = () => {
+    /*
+      IMPORTANT:
+
+      One-Way:
+        returnSeatCode   = ""
+        returnSeatNumber = ""
+        returnSeatPrice   = "0"
+
+      Round-Trip:
+        return seat values are preserved.
+
+      Therefore this does NOT break One-Way.
+    */
+
     const query =
       new URLSearchParams({
         /* =====================
            FLIGHT
         ===================== */
 
-        did, 
+        did,
+
         isg: String(isg),
+
         flightId,
+
         searchId,
+
         tId,
+
         price,
+
         airline,
+
         duration,
+
+        /* =====================
+           RETURN FLIGHT
+        ===================== */
+
+        returnFlightId,
+
+        returnTId,
 
         /* =====================
            PASSENGER
         ===================== */
 
         firstName,
+
         lastName,
+
         age,
+
         phone,
+
         phoneCountryCode,
+
         email,
+
         title,
+
         dob,
 
         /* =====================
@@ -514,12 +531,24 @@ function FlightMealPageContent() {
             : "",
 
         /* =====================
-           SEAT
+           OUTBOUND SEAT
         ===================== */
 
         seatCode,
+
         seatNumber,
+
         seatPrice,
+
+        /* =====================
+           RETURN SEAT
+        ===================== */
+
+        returnSeatCode,
+
+        returnSeatNumber,
+
+        returnSeatPrice,
 
         /* =====================
            MEAL
@@ -573,36 +602,75 @@ function FlightMealPageContent() {
       "========== CONTINUE TO BOOKING =========="
     );
 
-    console.log({
-      mealCode:
-        selectedMeal?.code || "",
+    console.log(
+      "Journey Type:",
+      isg
+        ? "ROUND TRIP"
+        : "ONE WAY"
+    );
 
-      mealName:
-        selectedMeal
-          ? getOptionName(
-              selectedMeal
-            )
-          : "",
+    console.log(
+      "OUTBOUND SEAT:",
+      {
+        seatCode,
+        seatNumber,
+        seatPrice,
+      }
+    );
 
-      mealPrice:
-        selectedMealPrice,
+    console.log(
+      "RETURN SEAT:",
+      {
+        returnSeatCode,
+        returnSeatNumber,
+        returnSeatPrice,
+      }
+    );
 
-      baggageCode:
-        selectedBaggage?.code || "",
+    console.log(
+      "MEAL:",
+      {
+        mealCode:
+          selectedMeal?.code || "",
 
-      baggageName:
-        selectedBaggage
-          ? getOptionName(
-              selectedBaggage
-            )
-          : "",
+        mealName:
+          selectedMeal
+            ? getOptionName(
+                selectedMeal
+              )
+            : "",
 
-      baggagePrice:
-        selectedBaggagePrice,
+        mealPrice:
+          selectedMealPrice,
+      }
+    );
 
-      ssrPrice:
-        totalSSRPrice,
-    });
+    console.log(
+      "BAGGAGE:",
+      {
+        baggageCode:
+          selectedBaggage?.code || "",
+
+        baggageName:
+          selectedBaggage
+            ? getOptionName(
+                selectedBaggage
+              )
+            : "",
+
+        baggagePrice:
+          selectedBaggagePrice,
+      }
+    );
+
+    console.log(
+      "SSR TOTAL:",
+      totalSSRPrice
+    );
+
+    console.log(
+      "=========================================="
+    );
 
     router.push(
       `/flight-book?${query.toString()}`
@@ -683,9 +751,11 @@ function FlightMealPageContent() {
               </p>
             </div>
 
+            {/* OUTBOUND SEAT */}
+
             <div>
               <p className="text-sm text-slate-400">
-                Seat
+                Outbound Seat
               </p>
 
               <p className="font-bold mt-1">
@@ -696,13 +766,42 @@ function FlightMealPageContent() {
 
             <div>
               <p className="text-sm text-slate-400">
-                Seat Price
+                Outbound Seat Price
               </p>
 
               <p className="font-bold mt-1">
                 ₹{seatPrice || "0"}
               </p>
             </div>
+
+            {/* RETURN SEAT - ROUND TRIP ONLY */}
+
+            {isg && (
+              <>
+                <div>
+                  <p className="text-sm text-slate-400">
+                    Return Seat
+                  </p>
+
+                  <p className="font-bold mt-1">
+                    {returnSeatNumber ||
+                      "Not Selected"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-slate-400">
+                    Return Seat Price
+                  </p>
+
+                  <p className="font-bold mt-1">
+                    ₹
+                    {returnSeatPrice ||
+                      "0"}
+                  </p>
+                </div>
+              </>
+            )}
 
           </div>
 
@@ -737,6 +836,7 @@ function FlightMealPageContent() {
               <div className="flex items-center justify-between mb-4">
 
                 <div>
+
                   <h2 className="text-2xl font-bold">
                     🍱 Meals
                   </h2>
@@ -745,6 +845,7 @@ function FlightMealPageContent() {
                     Choose an available meal for
                     your journey.
                   </p>
+
                 </div>
 
                 {meals.length > 0 && (
@@ -858,10 +959,14 @@ function FlightMealPageContent() {
                             <div className="text-right">
 
                               <p className="font-bold text-lg">
-                                {currency === "INR"
+
+                                {currency ===
+                                "INR"
                                   ? "₹"
                                   : `${currency} `}
+
                                 {amount}
+
                               </p>
 
                             </div>
@@ -893,9 +998,7 @@ function FlightMealPageContent() {
               <button
                 type="button"
                 onClick={() =>
-                  setSelectedMeal(
-                    null
-                  )
+                  setSelectedMeal(null)
                 }
                 className={`
                   mt-4
@@ -925,6 +1028,7 @@ function FlightMealPageContent() {
               <div className="flex items-center justify-between mb-4">
 
                 <div>
+
                   <h2 className="text-2xl font-bold">
                     🧳 Baggage
                   </h2>
@@ -932,6 +1036,7 @@ function FlightMealPageContent() {
                   <p className="text-sm text-slate-400 mt-1">
                     Add extra baggage if required.
                   </p>
+
                 </div>
 
                 {baggage.length > 0 && (
@@ -1045,10 +1150,14 @@ function FlightMealPageContent() {
                             <div className="text-right">
 
                               <p className="font-bold text-lg">
-                                {currency === "INR"
+
+                                {currency ===
+                                "INR"
                                   ? "₹"
                                   : `${currency} `}
+
                                 {amount}
+
                               </p>
 
                             </div>
@@ -1119,12 +1228,12 @@ function FlightMealPageContent() {
 
           <div className="space-y-4">
 
-            {/* SEAT */}
+            {/* OUTBOUND SEAT */}
 
             <div className="flex justify-between gap-4">
 
               <span className="text-slate-400">
-                Seat
+                Outbound Seat
               </span>
 
               <span className="font-semibold text-right">
@@ -1133,6 +1242,53 @@ function FlightMealPageContent() {
               </span>
 
             </div>
+
+            {/* OUTBOUND SEAT PRICE */}
+
+            <div className="flex justify-between gap-4">
+
+              <span className="text-slate-400">
+                Outbound Seat Price
+              </span>
+
+              <span className="font-semibold">
+                ₹{seatPrice || "0"}
+              </span>
+
+            </div>
+
+            {/* RETURN SEAT */}
+
+            {isg && (
+              <>
+                <div className="flex justify-between gap-4">
+
+                  <span className="text-slate-400">
+                    Return Seat
+                  </span>
+
+                  <span className="font-semibold text-right">
+                    {returnSeatNumber ||
+                      "Not Selected"}
+                  </span>
+
+                </div>
+
+                <div className="flex justify-between gap-4">
+
+                  <span className="text-slate-400">
+                    Return Seat Price
+                  </span>
+
+                  <span className="font-semibold">
+                    ₹
+                    {returnSeatPrice ||
+                      "0"}
+                  </span>
+
+                </div>
+              </>
+            )}
 
             {/* MEAL */}
 
@@ -1198,7 +1354,7 @@ function FlightMealPageContent() {
 
             </div>
 
-            {/* TOTAL */}
+            {/* SSR TOTAL */}
 
             <div className="border-t border-slate-700 pt-4 mt-4 flex justify-between items-center">
 

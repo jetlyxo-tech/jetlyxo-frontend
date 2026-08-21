@@ -10,17 +10,24 @@ function FlightSeatPageContent() {
   const router = useRouter();
   const params = useSearchParams();
 
- const did = params.get("did") || "";
+  /* =========================================================
+     BASIC FLIGHT DETAILS
+  ========================================================= */
 
- const isg = params.get("isg") === "true";
+  const did = params.get("did") || "";
+  const isg = params.get("isg") === "true";
 
- const flightId = params.get("flightId") || "";
- const searchId = params.get("searchId") || "";
- const tId = params.get("tId") || "";
+  const flightId = params.get("flightId") || "";
+  const searchId = params.get("searchId") || "";
+  const tId = params.get("tId") || "";
 
   const airline = params.get("airline") || "";
   const duration = params.get("duration") || "";
   const price = params.get("price") || "";
+
+  /* =========================================================
+     PASSENGER DETAILS
+  ========================================================= */
 
   const firstName = params.get("firstName") || "";
   const lastName = params.get("lastName") || "";
@@ -30,14 +37,15 @@ function FlightSeatPageContent() {
   const age = params.get("age") || "";
   const phone = params.get("phone") || "";
   const phoneCountryCode =
-  params.get("phoneCountryCode") || "+91";
+    params.get("phoneCountryCode") || "+91";
+
   const email = params.get("email") || "";
   const title = params.get("title") || "";
   const dob = params.get("dob") || "";
 
-  /* =========================
+  /* =========================================================
      PASSENGER DOCUMENT DETAILS
-  ========================= */
+  ========================================================= */
 
   const residence = params.get("residence") || "IN";
 
@@ -52,48 +60,78 @@ function FlightSeatPageContent() {
   const passportCountry =
     params.get("passportCountry") || "";
 
-  /* =========================
-     SEAT DETAILS
-  ========================= */
-
-  const seatCode = params.get("seatCode") || "";
-  const seatNumber = params.get("seatNumber") || "";
-  const seatPrice = params.get("seatPrice") || "";
+  /* =========================================================
+     STATE
+  ========================================================= */
 
   const [loading, setLoading] = useState(true);
+
   const [seatResponse, setSeatResponse] =
     useState<any>(null);
 
-  const [selectedSeat, setSelectedSeat] =
+  const [selectedOutboundSeat, setSelectedOutboundSeat] =
     useState<any>(null);
 
-  /* =========================
+  const [selectedReturnSeat, setSelectedReturnSeat] =
+    useState<any>(null);
+
+  /* =========================================================
      LOAD SEAT MAP
-  ========================= */
+  ========================================================= */
 
   useEffect(() => {
     async function loadSeatMap() {
       try {
         setLoading(true);
+const response: any = await seatMap({
+  dId: did,
 
-        const response = await seatMap({
-          dId: did,
+  pax: [
+    {
+      pid: 1,
+      title,
+      fn: firstName,
+      ln: lastName,
+    },
+  ],
+});
 
-          pax: [
-            {
-              pid: 1,
-              title,
-              fn: firstName,
-              ln: lastName,
-            },
-          ],
-        });
+        console.log(
+          "========== BONTON SEAT MAP =========="
+        );
 
-        console.log("Seat Map:", response);
+        console.log(
+          "Round Trip:",
+          isg
+        );
+
+        console.log(
+          "Seat Map Response:",
+          response
+        );
+
+        console.log(
+          "Outbound Seat Map:",
+          response?.data?.dtl?.[0]
+        );
+
+        if (isg) {
+          console.log(
+            "Return Seat Map:",
+            response?.data?.dtl?.[1]
+          );
+        }
+
+        console.log(
+          "====================================="
+        );
 
         setSeatResponse(response);
       } catch (err) {
-        console.error(err);
+        console.error(
+          "Seat Map Error:",
+          err
+        );
 
         toast.error(
           "Unable to load seat map."
@@ -108,43 +146,110 @@ function FlightSeatPageContent() {
         "Booking Detail ID (dId) not found."
       );
 
-console.log(
-  "========== SELECTED BONTON SEAT =========="
-);
-
-console.log(
-  JSON.stringify(selectedSeat, null, 2)
-);
-
-console.log(
-  "=========================================="
-);
-
       router.push("/");
-
       return;
     }
 
     loadSeatMap();
-  }, [did]);
+  }, [
+    did,
+    isg,
+    title,
+    firstName,
+    lastName,
+    router,
+  ]);
 
-  /* =========================
+  /* =========================================================
      SEAT DATA
-  ========================= */
+  ========================================================= */
+ 
+const outboundSeatRows =
+  seatResponse?.data?.dtl?.[0]
+    ?.smseat || [];
 
-  const seatRows =
-    seatResponse?.data?.dtl?.[0]?.smseat || [];
+const returnSeatRows =
+  isg
+    ? seatResponse?.data?.dtl?.[1]
+        ?.smseat || []
+    : [];
 
-  const visibleRows = seatRows.filter(
-    (row: any[]) =>
-      row.some((seat) => !seat.isempty)
-  );
+  const outboundVisibleRows =
+    outboundSeatRows.filter(
+      (row: any[]) =>
+        row.some(
+          (seat) => !seat.isempty
+        )
+    );
 
-  /* =========================
-     NO SEATS
-  ========================= */
+  const returnVisibleRows =
+    returnSeatRows.filter(
+      (row: any[]) =>
+        row.some(
+          (seat) => !seat.isempty
+        )
+    );
 
-  if (!loading && seatRows.length === 0) {
+  /* =========================================================
+     SEAT AVAILABILITY
+  ========================================================= */
+
+  const outboundHasSeats =
+    outboundVisibleRows.length > 0;
+
+  const returnHasSeats =
+    returnVisibleRows.length > 0;
+
+  /* =========================================================
+     CONTINUE VALIDATION
+  ========================================================= */
+
+  const canContinue = isg
+    ? !!selectedOutboundSeat &&
+      !!selectedReturnSeat
+    : !!selectedOutboundSeat;
+
+  /* =========================================================
+     DEBUG SELECTED SEATS
+  ========================================================= */
+
+  useEffect(() => {
+    console.log(
+      "========== SELECTED SEATS =========="
+    );
+
+    console.log(
+      "Trip Type:",
+      isg ? "ROUND_TRIP" : "ONEWAY"
+    );
+
+    console.log(
+      "Outbound Seat:",
+      selectedOutboundSeat
+    );
+
+    console.log(
+      "Return Seat:",
+      selectedReturnSeat
+    );
+
+    console.log(
+      "===================================="
+    );
+  }, [
+    isg,
+    selectedOutboundSeat,
+    selectedReturnSeat,
+  ]);
+
+  /* =========================================================
+     NO OUTBOUND SEATS
+  ========================================================= */
+
+  if (
+    !loading &&
+    !outboundHasSeats
+  ) {
     return (
       <div className="min-h-screen flex justify-center items-center text-xl text-gray-300">
         No seats available for this flight.
@@ -152,26 +257,180 @@ console.log(
     );
   }
 
-  /* =========================
+  /* =========================================================
+     SEAT MAP RENDERER
+  ========================================================= */
+
+  const renderSeatMap = (
+    rows: any[],
+    selectedSeat: any,
+    onSelect: (seat: any) => void
+  ) => {
+    const visibleRows =
+      rows.filter(
+        (row: any[]) =>
+          row.some(
+            (seat) => !seat.isempty
+          )
+      );
+
+    return (
+      <div className="max-w-4xl mx-auto overflow-x-auto">
+        <div className="min-w-[600px]">
+
+          {/* COLUMN HEADERS */}
+
+          <div className="grid grid-cols-8 gap-2 mb-3 text-center font-bold">
+
+            <div />
+
+            <div>A</div>
+            <div>B</div>
+            <div>C</div>
+
+            <div />
+
+            <div>D</div>
+            <div>E</div>
+            <div>F</div>
+
+          </div>
+
+          {/* SEAT ROWS */}
+
+          {visibleRows.map(
+            (
+              row: any[],
+              rowIndex: number
+            ) => (
+
+              <div
+                key={rowIndex}
+                className="grid grid-cols-8 gap-2 mb-2 items-center"
+              >
+
+                {/* ROW NUMBER */}
+
+                <div className="text-gray-400 font-bold text-center">
+
+                  {row
+                    .find(
+                      (seat) =>
+                        !seat.isempty
+                    )
+                    ?.sno?.replace(
+                      /[A-Z]/g,
+                      ""
+                    )}
+
+                </div>
+
+                {/* SEATS */}
+
+                {row.map(
+                  (
+                    seat: any,
+                    index: number
+                  ) => {
+
+                    if (seat.isempty) {
+                      return (
+                        <div
+                          key={index}
+                          className="w-14 h-14"
+                        />
+                      );
+                    }
+
+                    const isSelected =
+                      selectedSeat?.code ===
+                      seat.code;
+
+                    const isOccupied =
+                      seat.avlt === 2;
+
+                    return (
+                      <button
+                        key={seat.code}
+                        type="button"
+                        disabled={isOccupied}
+                        onClick={() => {
+
+                          if (
+                            seat.isempty ||
+                            isOccupied
+                          ) {
+                            return;
+                          }
+
+                          onSelect(seat);
+                        }}
+                        className={`
+                          h-16
+                          rounded-lg
+                          border
+                          text-sm
+                          font-semibold
+                          transition-all
+                          duration-150
+                          hover:scale-105
+                          hover:shadow-lg
+                          active:scale-95
+
+                          ${
+                            isSelected
+                              ? "bg-blue-600 border-blue-300"
+                              : isOccupied
+                              ? "bg-red-600 cursor-not-allowed"
+                              : seat.isfree
+                              ? "bg-green-600 hover:bg-green-500"
+                              : "bg-yellow-500 hover:bg-yellow-400 text-black"
+                          }
+                        `}
+                      >
+
+                        <div>
+                          {seat.sno}
+                        </div>
+
+                        <div className="text-xs">
+                          ₹{seat.prc}
+                        </div>
+
+                      </button>
+                    );
+                  }
+                )}
+
+              </div>
+            )
+          )}
+
+        </div>
+      </div>
+    );
+  };
+
+  /* =========================================================
      PAGE
-  ========================= */
+  ========================================================= */
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-4 sm:p-8">
 
       <div className="max-w-5xl mx-auto">
 
-        {/* =========================
+        {/* =====================================================
             HEADER
-        ========================= */}
+        ===================================================== */}
 
         <h1 className="text-3xl font-bold mb-8">
           Seat Selection
         </h1>
 
-        {/* =========================
-            FLIGHT CARD
-        ========================= */}
+        {/* =====================================================
+            FLIGHT / PASSENGER SUMMARY
+        ===================================================== */}
 
         <div className="bg-slate-800 rounded-xl p-6 mb-8">
 
@@ -217,40 +476,25 @@ console.log(
               </p>
             </div>
 
-            {selectedSeat && (
-              <>
-                <div>
-                  <p className="text-gray-400">
-                    Seat Charge
-                  </p>
+            <div>
+              <p className="text-gray-400">
+                Trip Type
+              </p>
 
-                  <p className="font-semibold">
-                    ₹{selectedSeat.prc}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-gray-400">
-                    Total
-                  </p>
-
-                  <p className="font-bold text-green-400">
-                    ₹
-                    {Number(price) +
-                      Number(
-                        selectedSeat.prc
-                      )}
-                  </p>
-                </div>
-              </>
-            )}
+              <p className="font-semibold">
+                {isg
+                  ? "Round Trip"
+                  : "One Way"}
+              </p>
+            </div>
 
           </div>
+
         </div>
 
-        {/* =========================
+        {/* =====================================================
             LEGEND
-        ========================= */}
+        ===================================================== */}
 
         <div className="flex flex-wrap justify-center gap-6 mb-8 text-sm">
 
@@ -276,9 +520,9 @@ console.log(
 
         </div>
 
-        {/* =========================
-            SEAT MAP
-        ========================= */}
+        {/* =====================================================
+            LOADING
+        ===================================================== */}
 
         {loading ? (
 
@@ -292,266 +536,342 @@ console.log(
 
           <>
 
-            {/* COCKPIT */}
+            {/* =================================================
+                OUTBOUND
+            ================================================= */}
 
-            <div className="flex justify-center mb-6">
+            <section className="bg-slate-800 rounded-xl p-6 mb-10">
 
-              <div className="bg-slate-700 px-8 py-2 rounded-full font-semibold">
-                Cockpit
-              </div>
+              <h2 className="text-2xl font-bold mb-2">
+                Outbound Flight
+              </h2>
 
-            </div>
+              <p className="text-gray-400 mb-6">
+                Select your seat for the
+                outbound journey.
+              </p>
 
-            {/* SEATS */}
+              {/* COCKPIT */}
 
-            <div className="max-w-4xl mx-auto overflow-x-auto">
+              <div className="flex justify-center mb-6">
 
-              <div className="min-w-[600px]">
-
-                {/* HEADERS */}
-
-                <div className="grid grid-cols-8 gap-2 mb-3 text-center font-bold">
-
-                  <div />
-
-                  <div>A</div>
-                  <div>B</div>
-                  <div>C</div>
-
-                  <div />
-
-                  <div>D</div>
-                  <div>E</div>
-                  <div>F</div>
-
+                <div className="bg-slate-700 px-8 py-2 rounded-full font-semibold">
+                  Cockpit
                 </div>
 
-                {/* ROWS */}
-
-                {visibleRows.map(
-                  (
-                    row: any[],
-                    rowIndex: number
-                  ) => (
-
-                    <div
-                      key={rowIndex}
-                      className="grid grid-cols-8 gap-2 mb-2 items-center"
-                    >
-
-                      {/* ROW NUMBER */}
-
-                      <div className="text-gray-400 font-bold text-center">
-
-                        {row
-                          .find(
-                            (s) => !s.isempty
-                          )
-                          ?.sno?.replace(
-                            /[A-Z]/g,
-                            ""
-                          )}
-
-                      </div>
-
-                      {/* SEATS */}
-
-                      {row.map(
-                        (
-                          seat: any,
-                          index: number
-                        ) => {
-
-                          if (seat.isempty) {
-                            return (
-                              <div
-                                key={index}
-                                className="w-14 h-14"
-                              />
-                            );
-                          }
-
-                          const isSelected =
-                            selectedSeat?.code ===
-                            seat.code;
-
-                          const isOccupied =
-                            seat.avlt === 2;
-
-                          return (
-                            <button
-                              key={seat.code}
-                              type="button"
-                              disabled={
-                                isOccupied
-                              }
-                              onClick={() => {
-
-                                if (
-                                  seat.isempty ||
-                                  isOccupied
-                                ) {
-                                  return;
-                                }
-
-                                setSelectedSeat(
-                                  seat
-                                );
-                              }}
-                              className={`
-                                h-16
-                                rounded-lg
-                                border
-                                text-sm
-                                font-semibold
-                                transition-all
-                                duration-150
-                                hover:scale-105
-                                hover:shadow-lg
-                                active:scale-95
-
-                                ${
-                                  isSelected
-                                    ? "bg-blue-600 border-blue-300"
-                                    : isOccupied
-                                    ? "bg-red-600 cursor-not-allowed"
-                                    : seat.isfree
-                                    ? "bg-green-600 hover:bg-green-500"
-                                    : "bg-yellow-500 hover:bg-yellow-400 text-black"
-                                }
-                              `}
-                            >
-
-                              <div>
-                                {seat.sno}
-                              </div>
-
-                              <div className="text-xs">
-                                ₹{seat.prc}
-                              </div>
-
-                            </button>
-                          );
-                        }
-                      )}
-
-                    </div>
-
-                  )
-                )}
-
               </div>
 
-            </div>
+              {/* OUTBOUND MAP */}
 
-            {/* =========================
-                SELECTED SEAT
-            ========================= */}
+              {renderSeatMap(
+                outboundSeatRows,
+                selectedOutboundSeat,
+                setSelectedOutboundSeat
+              )}
 
-            {selectedSeat && (
+              {/* OUTBOUND SELECTED */}
 
-              <div className="mt-10 max-w-md mx-auto bg-slate-800 rounded-xl p-6 shadow-xl">
+              {selectedOutboundSeat && (
 
-                <h2 className="text-xl font-bold mb-4">
-                  Selected Seat
-                </h2>
+                <div className="mt-8 bg-slate-900 rounded-xl p-5">
 
-                <div className="space-y-2">
+                  <h3 className="text-lg font-bold mb-3">
+                    Outbound Seat
+                  </h3>
 
                   <p>
                     Seat Number:
                     <span className="font-bold ml-2">
-                      {selectedSeat.sno}
+                      {selectedOutboundSeat.sno}
                     </span>
                   </p>
 
                   <p>
                     Seat Fare:
                     <span className="font-bold ml-2">
-                      ₹{selectedSeat.prc}
-                    </span>
-                  </p>
-
-                  <hr className="border-slate-600" />
-
-                  <p>
-                    Base Fare:
-                    <span className="font-bold ml-2">
-                      ₹{price}
-                    </span>
-                  </p>
-
-                  <p>
-                    Total Fare:
-                    <span className="font-bold text-green-400 ml-2">
-                      ₹
-                      {Number(price) +
-                        Number(
-                          selectedSeat.prc
-                        )}
+                      ₹{selectedOutboundSeat.prc}
                     </span>
                   </p>
 
                 </div>
 
-              </div>
+              )}
+
+            </section>
+
+            {/* =================================================
+                RETURN — ONLY ROUND TRIP
+            ================================================= */}
+
+            {isg && (
+
+              <section className="bg-slate-800 rounded-xl p-6 mb-10">
+
+                <h2 className="text-2xl font-bold mb-2">
+                  Return Flight
+                </h2>
+
+                <p className="text-gray-400 mb-6">
+                  Select your seat for the
+                  return journey.
+                </p>
+
+                {!returnHasSeats ? (
+
+                  <div className="text-center text-gray-400 py-10">
+                    No seats available for the return flight.
+                  </div>
+
+                ) : (
+
+                  <>
+
+                    {/* COCKPIT */}
+
+                    <div className="flex justify-center mb-6">
+
+                      <div className="bg-slate-700 px-8 py-2 rounded-full font-semibold">
+                        Cockpit
+                      </div>
+
+                    </div>
+
+                    {/* RETURN MAP */}
+
+                    {renderSeatMap(
+                      returnSeatRows,
+                      selectedReturnSeat,
+                      setSelectedReturnSeat
+                    )}
+
+                    {/* RETURN SELECTED */}
+
+                    {selectedReturnSeat && (
+
+                      <div className="mt-8 bg-slate-900 rounded-xl p-5">
+
+                        <h3 className="text-lg font-bold mb-3">
+                          Return Seat
+                        </h3>
+
+                        <p>
+                          Seat Number:
+                          <span className="font-bold ml-2">
+                            {selectedReturnSeat.sno}
+                          </span>
+                        </p>
+
+                        <p>
+                          Seat Fare:
+                          <span className="font-bold ml-2">
+                            ₹{selectedReturnSeat.prc}
+                          </span>
+                        </p>
+
+                      </div>
+
+                    )}
+
+                  </>
+
+                )}
+
+              </section>
 
             )}
+
+            {/* =================================================
+                TOTAL
+            ================================================= */}
+
+            <div className="bg-slate-800 rounded-xl p-6 mb-8">
+
+              <h2 className="text-xl font-bold mb-4">
+                Seat Summary
+              </h2>
+
+              <div className="space-y-3">
+
+                {selectedOutboundSeat && (
+
+                  <div className="flex justify-between">
+
+                    <span>
+                      Outbound Seat (
+                      {selectedOutboundSeat.sno}
+                      )
+                    </span>
+
+                    <span>
+                      ₹{selectedOutboundSeat.prc}
+                    </span>
+
+                  </div>
+
+                )}
+
+                {isg && selectedReturnSeat && (
+
+                  <div className="flex justify-between">
+
+                    <span>
+                      Return Seat (
+                      {selectedReturnSeat.sno}
+                      )
+                    </span>
+
+                    <span>
+                      ₹{selectedReturnSeat.prc}
+                    </span>
+
+                  </div>
+
+                )}
+
+                <hr className="border-slate-600" />
+
+                <div className="flex justify-between">
+
+                  <span>
+                    Base Fare
+                  </span>
+
+                  <span>
+                    ₹{price}
+                  </span>
+
+                </div>
+
+                <div className="flex justify-between text-lg font-bold text-green-400">
+
+                  <span>
+                    Total Fare
+                  </span>
+
+                  <span>
+                    ₹
+                    {Number(price || 0) +
+                      Number(
+                        selectedOutboundSeat?.prc ||
+                          0
+                      ) +
+                      (isg
+                        ? Number(
+                            selectedReturnSeat?.prc ||
+                              0
+                          )
+                        : 0)}
+                  </span>
+
+                </div>
+
+              </div>
+
+            </div>
 
           </>
 
         )}
 
-        {/* =========================
+        {/* =====================================================
             CONTINUE
-        ========================= */}
+        ===================================================== */}
 
-        <div className="flex justify-center mt-10">
+        <div className="flex justify-center mt-10 mb-10">
 
           <button
             type="button"
-            disabled={!selectedSeat}
+            disabled={
+              loading ||
+              !canContinue
+            }
             className={`
               px-10
               py-4
               shadow-lg
-              hover:shadow-blue-500/40
               rounded-lg
               font-semibold
               transition
 
               ${
-                selectedSeat
-                  ? "bg-blue-600 hover:bg-blue-700"
+                canContinue && !loading
+                  ? "bg-blue-600 hover:bg-blue-700 hover:shadow-blue-500/40"
                   : "bg-gray-600 cursor-not-allowed opacity-50"
               }
             `}
             onClick={() => {
 
-              if (!selectedSeat) {
+              if (!canContinue) {
                 return;
               }
 
+              console.log(
+                "========== CONTINUE TO MEALS =========="
+              );
+
+              console.log(
+                "Trip Type:",
+                isg
+                  ? "ROUND_TRIP"
+                  : "ONEWAY"
+              );
+
+              console.log(
+                "Outbound Seat:",
+                selectedOutboundSeat
+              );
+
+              console.log(
+                "Return Seat:",
+                selectedReturnSeat
+              );
+
+              console.log(
+                "======================================="
+              );
+
               const query =
                 new URLSearchParams({
+
+                  /* Flight */
+
                   did,
-                  isg: String(isg),
+
+                  isg:
+                    String(isg),
+
                   flightId,
+
                   searchId,
+
                   tId,
+
                   price,
+
                   airline,
+
                   duration,
+
+                  /* Passenger */
+
                   firstName,
+
                   lastName,
+
                   age,
+
                   phone,
+
                   phoneCountryCode,
+
                   email,
+
                   title,
+
                   dob,
 
-                  // Passenger document details
+                  /* Passenger documents */
+
                   residence,
 
                   pan:
@@ -574,17 +894,42 @@ console.log(
                       ? passportCountry
                       : "",
 
-                  // Seat
+                  /* =========================
+                     OUTBOUND SEAT
+                  ========================= */
+
                   seatCode:
-                    selectedSeat.code,
+                    selectedOutboundSeat.code,
 
                   seatNumber:
-                    selectedSeat.sno,
+                    selectedOutboundSeat.sno,
 
                   seatPrice:
                     String(
-                      selectedSeat.prc
+                      selectedOutboundSeat.prc
                     ),
+
+                  /* =========================
+                     RETURN SEAT
+                     Empty for One-Way
+                  ========================= */
+
+                  returnSeatCode:
+                    isg
+                      ? selectedReturnSeat.code
+                      : "",
+
+                  returnSeatNumber:
+                    isg
+                      ? selectedReturnSeat.sno
+                      : "",
+
+                  returnSeatPrice:
+                    isg
+                      ? String(
+                          selectedReturnSeat.prc
+                        )
+                      : "",
                 });
 
               router.push(

@@ -67,14 +67,27 @@ function FlightBookPageContent() {
      SEAT DETAILS
   ========================= */
 
-  const seatCode =
-    params.get("seatCode") || "";
+const seatCode =
+  params.get("seatCode") || "";
 
-  const seatNumber =
-    params.get("seatNumber") || "";
+const seatNumber =
+  params.get("seatNumber") || "";
 
-  const seatPrice =
-    params.get("seatPrice") || "0";
+const seatPrice =
+  params.get("seatPrice") || "0";
+
+/* =========================
+   RETURN SEAT DETAILS
+========================= */
+
+const returnSeatCode =
+  params.get("returnSeatCode") || "";
+
+const returnSeatNumber =
+  params.get("returnSeatNumber") || "";
+
+const returnSeatPrice =
+  params.get("returnSeatPrice") || "0";
 
   /* =========================
      MEAL DETAILS
@@ -245,35 +258,6 @@ function FlightBookPageContent() {
         nat = residence;
       }
 
-      /* =========================
-   DISPLAY PRICES
-========================= */
-
-
-
-/* =========================
-DISPLAY PRICES
-========================= */
-
-const basePrice = Number(price) || 0;
-
-const selectedSeatPrice =
-  Number(seatPrice) || 0;
-
-const selectedMealPrice =
-  Number(mealPrice) || 0;
-
-const selectedBaggagePrice =
-  Number(baggagePrice) || 0;
-
-const displayTotal =
-  basePrice +
-  selectedSeatPrice +
-  selectedMealPrice +
-  selectedBaggagePrice;
-      /* =========================
-         BONTON BOOK PAYLOAD
-      ========================= */
 
       const payload = {
         dId: did,
@@ -322,10 +306,7 @@ const displayTotal =
 
             fdocid: "",
 
-            /* =====================
-               SSR
-            ===================== */
- ssr: [
+ssr: [
   ...(seatCode
     ? [
         {
@@ -335,6 +316,21 @@ const displayTotal =
         },
       ]
     : []),
+    
+
+  ...(isg && returnSeatCode
+    ? [
+        {
+          type: "SeatDynamic",
+          triptype: "Return",
+          code: returnSeatCode,
+        },
+      ]
+    : []),
+
+  /* =========================
+     MEAL
+  ========================= */
 
   ...(mealCode
     ? [
@@ -346,6 +342,10 @@ const displayTotal =
       ]
     : []),
 
+  /* =========================
+     BAGGAGE
+  ========================= */
+
   ...(baggageCode
     ? [
         {
@@ -355,10 +355,10 @@ const displayTotal =
         },
       ]
     : []),
-],
+],  
+
 },
-],
-          
+        ],
         /* =========================
            GST
         ========================= */
@@ -373,7 +373,7 @@ const displayTotal =
 
         gste: "",
 
-        isg: false,
+        isg,
 
         /* =========================
            CONTACT
@@ -392,157 +392,140 @@ const displayTotal =
          * residence.
          */
         cc:
-          phoneCountryCode,
+        phoneCountryCode,
+    };
 
-        /*
-         * Local calculated total.
-         *
-         * Bonton Book payload itself
-         * does not document totalPrice
-         * as a request field, so be aware
-         * that your backend may strip or
-         * ignore this field before sending
-         * to Bonton.
-         */
-        totalPrice: displayTotal,
-      };
+    /* =========================
+       DEBUG FINAL BONTON PAYLOAD
+    ========================= */
 
-      /* =========================
-         DEBUG
-      ========================= */
+    console.log(
+      "========== FINAL BONTON BOOK PAYLOAD =========="
+    );
 
-      console.log(
-        "========== FINAL BONTON BOOK PAYLOAD =========="
-      );
+    console.log(
+      JSON.stringify(
+        payload,
+        null,
+        2
+      )
+    );
 
-      console.log(
-        JSON.stringify(
+    console.log(
+      "==============================================="
+    );
+
+    console.log(
+      "Residence:",
+      residence
+    );
+
+    console.log(
+      "Document Type:",
+      residence === "IN"
+        ? "PAN"
+        : "PASSPORT"
+    );
+
+    console.log(
+      "Phone Country Code:",
+      phoneCountryCode
+    );
+
+    console.log(
+      "Seat:",
+      {
+        code: seatCode,
+        number: seatNumber,
+        price: selectedSeatPrice,
+      }
+    );
+
+    console.log(
+      "Return Seat:",
+      {
+        code: returnSeatCode,
+        number: returnSeatNumber,
+        price: selectedReturnSeatPrice,
+      }
+    );
+
+    console.log(
+      "Trip Type:",
+      isg
+        ? "ROUND TRIP"
+        : "ONE WAY"
+    );
+
+    console.log(
+      "Meal:",
+      {
+        code: mealCode,
+        name: mealName,
+        price: selectedMealPrice,
+      }
+    );
+
+    console.log(
+      "Baggage:",
+      {
+        code: baggageCode,
+        name: baggageName,
+        price: selectedBaggagePrice,
+      }
+    );
+
+    console.log(
+      "Base Price:",
+      basePrice
+    );
+
+    console.log(
+      "Calculated Total:",
+      displayTotal
+    );
+
+    /* =========================
+       CREATE JETLY BOOKING
+    ========================= */
+
+    const booking =
+      await createBooking({
+        bookingType: "FLIGHT",
+
+        passengerName:
+          `${title} ${firstName} ${lastName}`,
+
+        passengerAge:
+          Number(age),
+
+        passengerPhone:
+          phone,
+
+        passengerEmail:
+          email,
+
+        totalPrice:
+          displayTotal,
+
+        bontonPayload:
           payload,
-          null,
-          2
-        )
+      });
+
+    console.log(
+      "Jetly Booking Response:",
+      booking
+    );
+
+    toast.success(
+      "Booking created. Proceed to payment."
+    );
+
+    setTimeout(() => {
+      router.push(
+        `/payment?bookingId=${booking.bookingId}`
       );
-
-      console.log(
-        "==============================================="
-      );
-
-      console.log(
-        "Residence:",
-        residence
-      );
-
-      console.log(
-        "Document Type:",
-        residence === "IN"
-          ? "PAN"
-          : "PASSPORT"
-      );
-
-      console.log(
-        "Phone Country Code:",
-        phoneCountryCode
-      );
-
-      console.log(
-        "Seat:",
-        {
-          code: seatCode,
-          number: seatNumber,
-          price: selectedSeatPrice,
-        }
-      );
-
-      console.log(
-        "Meal:",
-        {
-          code: mealCode,
-          name: mealName,
-          price: selectedMealPrice,
-        }
-      );
-
-      console.log(
-        "Baggage:",
-        {
-          code: baggageCode,
-          name: baggageName,
-          price: selectedBaggagePrice,
-        }
-      );
-
-      console.log(
-        "Base Price:",
-        basePrice
-      );
-
-      console.log(
-        "Calculated Total:"
-      );
-
-      /* =========================
-         CREATE JETLY BOOKING
-      ========================= */
-      console.log(
-  "========== BONTON BOOKING PAYLOAD =========="
-);
-
-       console.log(
-  JSON.stringify(payload, null, 2)
-);
-
-       console.log(
-  "============================================"
-);
-      const booking =
-        await createBooking({
-          bookingType:
-            "FLIGHT",
-
-          passengerName:
-            `${title} ${firstName} ${lastName}`,
-
-          passengerAge:
-            Number(age),
-
-          passengerPhone:
-            phone,
-
-          passengerEmail:
-            email,
-
-          /*
-           * Keep your existing Jetly
-           * booking service price.
-           *
-           * The complete selected
-           * amount is available in
-           * bontonPayload.totalPrice.
-           */
-          totalPrice: displayTotal,
-
-          /*
-           * Save the complete
-           * Bonton booking payload.
-           */
-          bontonPayload:
-            payload,
-        });
-
-      console.log(
-        "Jetly Booking Response:",
-        booking
-      );
-
-      toast.success(
-        "Booking created. Proceed to payment."
-      );
-
-      setTimeout(() => {
-        router.push(
-          `/payment?bookingId=${booking.bookingId}`
-        );
-      }, 800);
+    }, 800);
 
     } catch (err: any) {
       console.error(
@@ -601,15 +584,26 @@ const displayTotal =
       ? "PAN"
       : "Passport";
 
-  /* =========================
-     DISPLAY TOTAL
-  ========================= */
+const basePrice = Number(price) || 0;
 
-  const displayTotal =
-    (Number(price) || 0) +
-    (Number(seatPrice) || 0) +
-    (Number(mealPrice) || 0) +
-    (Number(baggagePrice) || 0);
+const selectedSeatPrice =
+  Number(seatPrice) || 0;
+
+const selectedReturnSeatPrice =
+  Number(returnSeatPrice) || 0;
+
+const selectedMealPrice =
+  Number(mealPrice) || 0;
+
+const selectedBaggagePrice =
+  Number(baggagePrice) || 0;
+
+const displayTotal =
+  basePrice +
+  selectedSeatPrice +
+  selectedReturnSeatPrice +
+  selectedMealPrice +
+  selectedBaggagePrice;
 
   /* =========================
      PAGE
@@ -686,38 +680,50 @@ const displayTotal =
                 "Not provided"}
           </p>
 
-          <hr className="border-slate-600" />
+       <hr className="border-slate-600" />
 
-          {/* =====================
-              SEAT
-          ===================== */}
+{/* =====================
+    OUTBOUND SEAT
+===================== */}
 
+<p>
+  <b>Outbound Seat:</b>{" "}
+  {seatNumber || "Not Selected"}
+</p>
+
+<p>
+  <b>Outbound Seat Price:</b>{" "}
+  ₹{Number(seatPrice) || 0}
+</p>
+
+{/* =====================
+    RETURN SEAT
+===================== */}
+
+{isg && (
+  <>
+    <p>
+      <b>Return Seat:</b>{" "}
+      {returnSeatNumber || "Not Selected"}
+    </p>
+
+    <p>
+      <b>Return Seat Price:</b>{" "}
+      ₹{Number(returnSeatPrice) || 0}
+    </p>
+  </>
+)}
+
+<hr className="border-slate-600" />
+
+{/* =====================
+    MEAL
+===================== */}
+        
           <p>
-            <b>Seat:</b>{" "}
-            {seatNumber ||
-              "Not Selected"}
-          </p>
-
-          <p>
-            <b>Seat Price:</b>{" "}
-            ₹{Number(seatPrice) || 0}
-          </p>
-
-          <hr className="border-slate-600" />
-
-          {/* =====================
-              MEAL
-          ===================== */}
-
-          <p>
-            <b>Meal:</b>{" "}
-            ₹{Number(mealPrice) || 0}
-          </p>
-
-          <p>
-            <b>Meal Price:</b>{" "}
-            ₹{Number(baggagePrice) || 0}
-          </p>
+  <b>Meal Price:</b>{" "}
+  ₹{Number(mealPrice) || 0}
+</p>
 
           <hr className="border-slate-600" />
 
