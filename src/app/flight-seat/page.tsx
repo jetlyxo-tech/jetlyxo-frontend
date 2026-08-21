@@ -14,10 +14,26 @@ function FlightSeatPageContent() {
      BASIC FLIGHT DETAILS
   ========================================================= */
 
-  const did = params.get("did") || "";
-  const isg = params.get("isg") === "true";
+const did = params.get("did") || "";
 
-  const flightId = params.get("flightId") || "";
+const tripType =
+  params.get("tripType") || "";
+
+const returnFlightId =
+  params.get("returnFlightId") || "";
+
+const isgParam =
+  params.get("isg");
+
+const isRoundTrip =
+  tripType === "ROUND_TRIP" ||
+  returnFlightId !== "" ||
+  isgParam === "true";
+
+const isg = isRoundTrip;
+
+const flightId =
+  params.get("flightId") || "";
   const searchId = params.get("searchId") || "";
   const tId = params.get("tId") || "";
 
@@ -204,10 +220,13 @@ const returnSeatRows =
      CONTINUE VALIDATION
   ========================================================= */
 
-  const canContinue = isg
-    ? !!selectedOutboundSeat &&
-      !!selectedReturnSeat
-    : !!selectedOutboundSeat;
+ const canContinue =
+  !!selectedOutboundSeat &&
+  (
+    !isg ||
+    !returnHasSeats ||
+    !!selectedReturnSeat
+  );
 
   /* =========================================================
      DEBUG SELECTED SEATS
@@ -840,6 +859,11 @@ const returnSeatRows =
                   isg:
                     String(isg),
 
+                  tripType:
+                    isg
+                     ? "ROUND_TRIP"
+                     : "ONEWAY",
+
                   flightId,
 
                   searchId,
@@ -915,21 +939,19 @@ const returnSeatRows =
                   ========================= */
 
                   returnSeatCode:
-                    isg
+                     isg && selectedReturnSeat
                       ? selectedReturnSeat.code
                       : "",
 
                   returnSeatNumber:
-                    isg
-                      ? selectedReturnSeat.sno
-                      : "",
+                    isg && selectedReturnSeat
+                     ? selectedReturnSeat.sno
+                     : "",
 
                   returnSeatPrice:
-                    isg
-                      ? String(
-                          selectedReturnSeat.prc
-                        )
-                      : "",
+                    isg && selectedReturnSeat
+                     ? String(selectedReturnSeat.prc)
+                     : "",
                 });
 
               router.push(
