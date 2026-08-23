@@ -88,84 +88,10 @@ async function fetchFlightSearchApi(
 
   return responseData;
 }
+
 export async function searchFlights(
   params: FlightSearchParams
 ): Promise<Flight[]> {
-  try {
-    const response = await fetchFlightSearchApi(
-      "/flights/search",
-      {
-        origin: params.from,
-  destination: params.to,
-  departureDate: params.departureDate,
-  returnDate: params.returnDate,
-
-  adults: params.travellers ?? 1,
-  children: params.children ?? 0,
-  infants: params.infants ?? 0,
-
-  cabin: params.cabin,
-  fareType: params.fareType,
-  tripType: params.tripType,
-      }
-    );
-
-const flights: Flight[] =
-  response?.data ??
-  response?.flights ??
-  [];
-
-const searchId =
-  response?.searchId ??
-  response?.stid ??
-  "";
-
-const tId =
-  response?.tId ??
-  "";
-
-return flights.map((flight) => ({
-  ...flight,
-
-  searchId:
-    flight.searchId ||
-    searchId,
-
-  tId:
-    flight.tId ||
-    tId,
-}));
-  } catch (error) {
-    console.error(
-      "Flight Search Error:",
-      error
-    );
-
-    throw new Error(
-      error instanceof Error
-        ? error.message
-        : "Flight search failed"
-    );
-  }
-}
-
-/* =========================================================
-   SEARCH FLIGHTS WITH BONTON SEARCH CONTEXT
-========================================================= */
-
-export interface FlightSearchResponse {
-  success?: boolean;
-  fallback?: boolean;
-  provider?: string | null;
-  searchId?: string | null;
-  stid?: string | null;
-  count?: number;
-  data?: Flight[];
-}
-
-export async function searchFlightsWithMeta(
-  params: FlightSearchParams
-): Promise<FlightSearchResponse> {
   try {
     const response = await fetchFlightSearchApi(
       "/flights/search",
@@ -185,18 +111,63 @@ export async function searchFlightsWithMeta(
       }
     );
 
-    return {
-      success: response?.success ?? false,
-      fallback: response?.fallback ?? false,
-      provider: response?.provider ?? null,
-      searchId: response?.searchId ?? null,
-      stid: response?.stid ?? null,
-      count: response?.count ?? response?.data?.length ?? 0,
-      data: response?.data ?? [],
-    };
+    const flights: Flight[] =
+      response?.data ??
+      response?.flights ??
+      [];
+
+    // Bonton search ID used by Fare Quote
+    const searchId =
+      response?.searchId ??
+      response?.sId ??
+      "";
+
+    // Bonton trace ID required by /flightapi/next
+    const stid =
+      response?.stid ??
+      "";
+
+    const responseTId =
+      response?.tId ??
+      "";
+
+    return flights.map((flight: any) => ({
+      ...flight,
+
+      searchId:
+        flight.searchId ||
+        searchId,
+
+      // IMPORTANT:
+      // Preserve Bonton STID for Next API filtering/pagination.
+      stid:
+        flight.stid ||
+        stid,
+
+      tId:
+        flight.tId ||
+        responseTId,
+
+      // Also preserve search context on nested return flight.
+      returnFlight: flight.returnFlight
+        ? {
+            ...flight.returnFlight,
+
+            searchId:
+              flight.returnFlight.searchId ||
+              flight.searchId ||
+              searchId,
+
+            stid:
+              flight.returnFlight.stid ||
+              flight.stid ||
+              stid,
+          }
+        : flight.returnFlight,
+    }));
   } catch (error) {
     console.error(
-      "Flight Search With Metadata Error:",
+      "Flight Search Error:",
       error
     );
 
