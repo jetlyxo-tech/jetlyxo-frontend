@@ -666,8 +666,10 @@ export default function FlightResults({
   useState(true);
 
   const nextRequestInProgress = useRef(false);
+  const priceInitialized = useRef(false);
 
   useEffect(() => {
+  priceInitialized.current = false;
   setFlightList(flights);
 
   const firstFlight = flights[0] as any;
@@ -697,7 +699,13 @@ export default function FlightResults({
   );
 
   setSliderMax(highest);
-  setPriceLimit(highest);
+
+  // Initialize price only once for the original search results.
+  // Do NOT reset it after NEXT/filter responses.
+  if (!priceInitialized.current) {
+    setPriceLimit(highest);
+    priceInitialized.current = true;
+  }
 }, [flightList]);
 
 /* ---------------------------------------------
@@ -1047,6 +1055,18 @@ const filteredProviderFlights = enrichedFlights.filter(
   }
 );
 
+
+setFlightList(filteredProviderFlights);
+
+console.log(
+  "========== FILTERED FLIGHTS RECEIVED ==========",
+  {
+    received: enrichedFlights.length,
+    afterStopFilter: filteredProviderFlights.length,
+    nonStop: nextNonStop,
+    oneStop: nextOneStop,
+  }
+);
      
 
     console.log(
@@ -1083,6 +1103,8 @@ const filteredProviderFlights = enrichedFlights.filter(
     normalizedFlights,
   ]
 );
+
+
 
 /* ---------------------------------------------
    FILTERS
@@ -1278,9 +1300,26 @@ const filteredProviderFlights = enrichedFlights.filter(
   onChange={(e) => {
     setPriceLimit(Number(e.target.value));
   }}
+  onMouseUp={(e) => {
+    const value = Number(e.currentTarget.value);
+
+    console.log("PRICE FILTER → NEXT:", value);
+
+    applyProviderFilters({
+      nextPriceLimit: value,
+    });
+  }}
+  onTouchEnd={(e) => {
+    const value = Number(e.currentTarget.value);
+
+    console.log("PRICE FILTER → NEXT:", value);
+
+    applyProviderFilters({
+      nextPriceLimit: value,
+    });
+  }}
   className="w-full accent-cyan-500"
 />
-   
 
           <div className="flex justify-between mt-3 text-sm text-white/60">
 
