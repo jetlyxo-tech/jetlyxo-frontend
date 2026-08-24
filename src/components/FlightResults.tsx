@@ -411,10 +411,16 @@ function normalizeFlight(
      STOPS
   --------------------------------------------- */
 
-  const stopCount =
-    typeof flight.stops === "number"
-      ? flight.stops
-      : Math.max(segments.length - 1, 0);
+ const stopCount =
+  typeof flight.stops === "number"
+    ? flight.stops
+    : rawFlight.stopov === true
+      ? Math.max(segments.length, 1)
+      : rawFlight.lay ||
+        rawFlight.layat ||
+        Number(rawFlight.laymin ?? 0) > 0
+        ? 1
+        : Math.max(segments.length - 1, 0);
 
   /* ---------------------------------------------
      LAYOVER DATA
@@ -1168,9 +1174,15 @@ const filteredProviderFlights = enrichedFlights.filter(
       flight.fltseg ??
       [];
 
-    const stopCount =
-      typeof flight.stops === "number"
-        ? flight.stops
+  const stopCount =
+   typeof flight.stops === "number"
+    ? flight.stops
+    : flight.stopov === true
+      ? Math.max(segments.length, 1)
+      : flight.lay ||
+        flight.layat ||
+        Number(flight.laymin ?? 0) > 0
+        ? 1
         : Math.max(segments.length - 1, 0);
 
     if (nextNonStop && !nextOneStop) {
