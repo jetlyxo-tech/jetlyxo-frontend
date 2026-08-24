@@ -17,78 +17,176 @@ function normalizeBooking(booking: any) {
     booking.flightData.length > 0
   ) {
     const flightData = booking.flightData[0];
-    const segment = flightData?.segs?.[0];
+
+    const segments = Array.isArray(flightData?.segs)
+      ? flightData.segs
+      : [];
+
+    const firstSegment = segments[0] ?? null;
+    const lastSegment =
+      segments.length > 0
+        ? segments[segments.length - 1]
+        : null;
+
+    const isRoundTrip =
+      String(flightData?.trpt ?? "").toUpperCase() === "RETURN";
 
     const seat =
       flightData?.mbg?.find(
-        (item: any) => item.ssr_type === "SeatDynamic"
+        (item: any) =>
+          item.ssr_type === "SeatDynamic"
       )?.ssr_info ?? "Not Selected";
 
     const meal =
       flightData?.mbg?.find(
-        (item: any) => item.ssr_type === "Meal"
+        (item: any) =>
+          item.ssr_type === "Meal"
       )?.ssr_info ?? "No Meal";
+
+    /*
+     * Bonton RETURN bookings:
+     *
+     * trpt = RETURN
+     *
+     * segs contains the ONWARD journey.
+     *
+     * afseg contains the return journey description,
+     * for example:
+     *
+     * "CCU to DEL"
+     *
+     * afpnr contains the airline/alternate PNR when supplied.
+     */
+
+    let returnOrigin = null;
+    let returnDestination = null;
+
+    if (isRoundTrip && flightData?.afseg) {
+      const parts = String(
+        flightData.afseg
+      )
+        .split(/\s+to\s+/i)
+        .map((value: string) =>
+          value.trim()
+        );
+
+      if (parts.length === 2) {
+        returnOrigin = parts[0];
+        returnDestination = parts[1];
+      }
+    }
 
     return {
       id: booking.id,
 
-      // Bonton reference
-      bookingCode: flightData?.brn ?? null,
+      // -----------------------------
+      // Bonton references
+      // -----------------------------
+      bookingCode:
+        flightData?.brn ?? null,
 
-      bookingType: booking.bookingType,
-      status: booking.status,
+      bookingType:
+        booking.bookingType,
 
+      status:
+        booking.status,
+
+      // -----------------------------
+      // Passenger
+      // -----------------------------
       passengerName:
         booking.passengerName ??
         flightData?.trv?.[0]?.name ??
         "-",
 
+      // -----------------------------
+      // PNR
+      // -----------------------------
       pnr:
-        booking.pnr ??
-        flightData?.pnr ??
-        flightData?.gdsPnr ??
+        booking.pnr ||
+        flightData?.pnr ||
+        flightData?.gdsPnr ||
         "-",
 
-      airline: segment?.airnm ?? "-",
+      // -----------------------------
+      // ONWARD JOURNEY
+      // -----------------------------
+      airline:
+        firstSegment?.airnm ??
+        "-",
 
-      flightNo: segment
-        ? `${segment.aircd ?? ""}-${segment.fltno ?? ""}`
-        : "-",
+      flightNo:
+        firstSegment
+          ? `${firstSegment.aircd ?? ""}-${firstSegment.fltno ?? ""}`
+          : "-",
 
       origin:
-        segment?.orgapc ??
+        firstSegment?.orgapc ??
         flightData?.org ??
         "-",
 
       destination:
-        segment?.dstapc ??
+        lastSegment?.dstapc ??
         flightData?.dst ??
         "-",
 
       originCity:
-        segment?.orgcty ??
+        firstSegment?.orgcty ??
         "-",
 
       destinationCity:
-        segment?.dstcty ??
+        lastSegment?.dstcty ??
         "-",
 
       departure:
-        segment?.dptm ??
+        firstSegment?.dptm ??
         null,
 
       arrival:
-        segment?.artm ??
+        lastSegment?.artm ??
         null,
 
+      // All onward segments.
+      segments,
+
+      // -----------------------------
+      // RETURN JOURNEY
+      // -----------------------------
+      isRoundTrip,
+
+      returnOrigin,
+
+      returnDestination,
+
+      returnSegment:
+        isRoundTrip
+          ? {
+              route:
+                flightData?.afseg ??
+                null,
+
+              pnr:
+                flightData?.afpnr ??
+                null,
+            }
+          : null,
+
+      // -----------------------------
+      // SSR
+      // -----------------------------
       seat,
+
       meal,
 
+      // -----------------------------
+      // Price
+      // -----------------------------
       totalPrice:
         Number(booking.totalPrice) ||
         Number(flightData?.prcd?.np) ||
         0,
 
+      // Keep complete raw booking.
       raw: booking,
     };
   }
@@ -97,52 +195,60 @@ function normalizeBooking(booking: any) {
   // Normal DB flight
   // -----------------------------
   if (booking.flight) {
-    return {
-      id: booking.id,
-      bookingCode: null,
+   return {
+    id: booking.id,
 
-      bookingType: booking.bookingType,
-      status: booking.status,
+    bookingCode: null,
 
-      passengerName: booking.passengerName ?? "-",
-      pnr: booking.pnr ?? "-",
+    bookingType:
+      booking.bookingType,
 
-      airline: booking.flight.airline ?? "-",
+    status:
+      booking.status,
 
-      flightNo:
-        booking.flight.flightNo ?? "-",
+    passengerName:
+      booking.passengerName ?? "-",
 
-      origin:
-        booking.flight.fromCity ?? "-",
+    pnr:
+      booking.pnr ?? "-",
 
-      destination:
-        booking.flight.toCity ?? "-",
+    airline: "-",
 
-      originCity:
-        booking.flight.fromCity ?? "-",
+    flightNo: "-",
 
-      destinationCity:
-        booking.flight.toCity ?? "-",
+    origin: "-",
 
-      departure:
-        booking.flight.departure ?? null,
+    destination: "-",
 
-      arrival:
-        booking.flight.arrival ?? null,
+    originCity: "-",
 
-      seat: "Not Selected",
-      meal: "No Meal",
+    destinationCity: "-",
 
-      totalPrice:
-        Number(booking.totalPrice) || 0,
+    departure: null,
 
-      raw: booking,
-    };
-  }
+    arrival: null,
 
-  // -----------------------------
-  // Other booking types
-  // -----------------------------
+    segments: [],
+
+    isRoundTrip: false,
+
+    returnOrigin: null,
+
+    returnDestination: null,
+
+    returnSegment: null,
+
+    seat: "Not Selected",
+
+    meal: "No Meal",
+
+    totalPrice:
+      Number(booking.totalPrice) || 0,
+
+    raw: booking,
+  };
+} 
+
   return {
     id: booking.id,
     bookingCode: null,
@@ -305,6 +411,34 @@ export default function MyBookingsPage() {
             </div>
 
           </div>
+           
+{booking.isRoundTrip &&
+  booking.returnOrigin &&
+  booking.returnDestination && (
+    <div className="mt-6 border-t border-slate-700 pt-6">
+      <p className="text-sm text-gray-400 mb-2">
+        Return Journey
+      </p>
+
+      <div className="text-3xl font-bold text-center">
+        {booking.returnOrigin}
+
+        <span className="mx-5 text-blue-400">
+          ✈
+        </span>
+
+        {booking.returnDestination}
+      </div>
+
+      {booking.returnSegment?.pnr && (
+        <p className="text-center text-gray-400 mt-2">
+          Return PNR:{" "}
+          {booking.returnSegment.pnr}
+        </p>
+      )}
+    </div>
+  )}
+
 
           {/* Details */}
 

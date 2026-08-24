@@ -168,253 +168,378 @@ function normalizeFlight(
   flight: Flight,
   index: number
 ): NormalizedFlight {
+  const rawFlight = flight as any;
+
   const price = Number(flight.price ?? 0);
 
-  const rawFlight = flight as any;
-const rawSegments =
-  rawFlight.disseg ??
-  rawFlight.fltseg ??
-  rawFlight.segments ??
-  [];
+  /* ---------------------------------------------
+     SEGMENTS
+  --------------------------------------------- */
 
-console.log(
-  "========== BONTON SEGMENTS ==========",
-  {
-    id: rawFlight.id,
-    disseg: rawFlight.disseg,
-    fltseg: rawFlight.fltseg,
-  }
-);
+  const rawSegments =
+    rawFlight.disseg ??
+    rawFlight.fltseg ??
+    rawFlight.segments ??
+    [];
 
-const segments = Array.isArray(rawSegments)
-  ? rawSegments.map((segment: any) => ({
+  const normalizeSegments = (segments: any[]) => {
+    if (!Array.isArray(segments)) {
+      return [];
+    }
+
+    return segments.map((segment: any) => ({
       from:
         segment.orgctco ??
         segment.orgapco ??
+        segment.org ??
         segment.from ??
         "",
+
       to:
         segment.desctco ??
         segment.desapco ??
+        segment.des ??
         segment.to ??
         "",
+
       departure:
         segment.deptm ??
         segment.departure ??
         undefined,
+
       arrival:
         segment.arrtm ??
         segment.arrival ??
         undefined,
+
       duration:
         segment.dur ??
         segment.duration ??
         undefined,
+
       flightNumber:
         segment.fltno ??
         segment.flightNumber ??
         undefined,
+
       airline:
         segment.airna ??
         segment.airline ??
         undefined,
+
       airlineCode:
         segment.airco ??
         segment.airlineCode ??
         undefined,
+
       layoverMinutes:
         Number(segment.laymin ?? 0) || 0,
+
       layoverAirport:
         segment.lay ??
         undefined,
+
       layoverLocation:
         segment.layat ??
         undefined,
-    }))
-  : [];
+    }));
+  };
 
+  const segments = normalizeSegments(rawSegments);
 
-const totalPrice =
-  rawFlight.tripType === "ROUND_TRIP"
-    ? Number(
-        rawFlight.totalPrice ??
-        price + Number(rawFlight.returnFlight?.price ?? 0)
-      )
-    : price;
+  /* ---------------------------------------------
+     ONWARD ORIGIN / DESTINATION
+
+     Priority:
+     1. Bonton top-level org/des
+     2. First/last segment
+     3. Existing frontend values
+  --------------------------------------------- */
+
+  const journeyFrom =
+    rawFlight.org ??
+    rawFlight.orgctco ??
+    rawFlight.orgapco ??
+    segments[0]?.from ??
+    flight.from ??
+    "";
+
+  const journeyTo =
+    rawFlight.des ??
+    rawFlight.desctco ??
+    rawFlight.desapco ??
+    segments[segments.length - 1]?.to ??
+    flight.to ??
+    "";
+
+  /* ---------------------------------------------
+     TOTAL PRICE
+  --------------------------------------------- */
+
+  const totalPrice =
+    rawFlight.tripType === "ROUND_TRIP"
+      ? Number(
+          rawFlight.totalPrice ??
+          price +
+            Number(rawFlight.returnFlight?.price ?? 0)
+        )
+      : price;
+
+  /* ---------------------------------------------
+     STOPS
+  --------------------------------------------- */
+
+  const stopCount =
+    typeof flight.stops === "number"
+      ? flight.stops
+      : Math.max(segments.length - 1, 0);
+
+  /* ---------------------------------------------
+     LAYOVER DATA
+  --------------------------------------------- */
+
+  const layoverMinutes =
+    segments.length > 1
+      ? segments
+          .slice(0, -1)
+          .reduce(
+            (total: number, segment: any) =>
+              total +
+              Number(segment.layoverMinutes ?? 0),
+            0
+          )
+      : 0;
+
+  const layoverSegment =
+    segments.find(
+      (segment: any) =>
+        Number(segment.layoverMinutes ?? 0) > 0
+    ) ??
+    (segments.length > 1
+      ? segments[1]
+      : undefined);
+
+  /* ---------------------------------------------
+     RETURN FLIGHT
+  --------------------------------------------- */
+
+  let normalizedReturnFlight:
+    | NormalizedFlight["returnFlight"]
+    | undefined;
+
+  if (
+    rawFlight.tripType === "ROUND_TRIP" &&
+    rawFlight.returnFlight
+  ) {
+    const rawReturn = rawFlight.returnFlight;
+
+    const rawReturnSegments =
+      rawReturn.disseg ??
+      rawReturn.fltseg ??
+      rawReturn.segments ??
+      [];
+
+    const returnSegments =
+      normalizeSegments(rawReturnSegments);
+
+    const returnFrom =
+      rawReturn.org ??
+      rawReturn.orgctco ??
+      rawReturn.orgapco ??
+      returnSegments[0]?.from ??
+      rawReturn.from ??
+      "";
+
+    const returnTo =
+      rawReturn.des ??
+      rawReturn.desctco ??
+      rawReturn.desapco ??
+      returnSegments[
+        returnSegments.length - 1
+      ]?.to ??
+      rawReturn.to ??
+      "";
+
+    normalizedReturnFlight = {
+      id: rawReturn.id,
+
+      tId: rawReturn.tId,
+
+      airline:
+        rawReturn.airline ??
+        "",
+
+      airlineCode:
+        rawReturn.airlineCode ??
+        "",
+
+      from: returnFrom,
+
+      to: returnTo,
+
+      departure:
+        rawReturn.departure,
+
+      arrival:
+        rawReturn.arrival,
+
+      duration:
+        rawReturn.duration,
+
+      stops:
+        typeof rawReturn.stops === "number"
+          ? rawReturn.stops
+          : Math.max(
+              returnSegments.length - 1,
+              0
+            ),
+
+      price:
+        Number(rawReturn.price ?? 0),
+
+      seats:
+        rawReturn.seats,
+
+      cabin:
+        rawReturn.cabin ??
+        "Economy",
+
+      flightNumber:
+        rawReturn.flightNumber,
+
+      segments:
+        returnSegments,
+
+      totalPrice:
+        Number(
+          rawReturn.totalPrice ??
+          rawReturn.price ??
+          0
+        ),
+    };
+  }
+
+  /* ---------------------------------------------
+     DEBUG
+  --------------------------------------------- */
+
+  console.log(
+    "========== NORMALIZED FLIGHT ==========",
+    {
+      id: flight.id,
+      tripType: rawFlight.tripType,
+
+      onward: {
+        from: journeyFrom,
+        to: journeyTo,
+        stops: stopCount,
+        segments,
+      },
+
+      returnFlight:
+        normalizedReturnFlight
+          ? {
+              from:
+                normalizedReturnFlight.from,
+              to:
+                normalizedReturnFlight.to,
+              stops:
+                normalizedReturnFlight.stops,
+              segments:
+                normalizedReturnFlight.segments,
+            }
+          : null,
+    }
+  );
+
+  /* ---------------------------------------------
+     FINAL NORMALIZED FLIGHT
+  --------------------------------------------- */
 
   return {
     id: flight.id ?? index,
 
-    airline: flight.airline || "Unknown Airline",
-    airlineCode: (flight as any).airlineCode || "",
+    airline:
+      flight.airline ||
+      "Unknown Airline",
 
-    from: flight.from || "",
-    to: flight.to || "",
+    airlineCode:
+      (flight as any).airlineCode ||
+      "",
 
-   priceNumber: totalPrice,
+    /*
+      IMPORTANT:
+      Use the complete itinerary endpoints,
+      not an intermediate stop.
+    */
+    from: journeyFrom,
 
-  priceDisplay:
-  price > 0
-    ? `₹${price.toLocaleString("en-IN")}`
-    : "—",
+    to: journeyTo,
 
-    duration: flight.duration || "N/A",
+    priceNumber:
+      totalPrice,
 
-        dep: flight.departure || "--:--",
+    priceDisplay:
+      price > 0
+        ? `₹${price.toLocaleString("en-IN")}`
+        : "—",
+
+    duration:
+      flight.duration ||
+      "N/A",
+
+    dep:
+      flight.departure ||
+      "--:--",
 
     stops:
-      typeof flight.stops === "number"
-        ? flight.stops === 0
-          ? "Non-stop"
-          : `${flight.stops} Stop`
-        : segments.length > 1
-        ? `${segments.length - 1} Stop`
-        : "Non-stop",
+      stopCount === 0
+        ? "Non-stop"
+        : `${stopCount} Stop`,
 
-    // LAYOVER DATA
     segments,
 
-    layoverMinutes:
-      segments.length > 1
-        ? segments
-            .slice(0, -1)
-            .reduce(
-              (total: number, segment: any) =>
-                total + Number(segment.layoverMinutes ?? 0),
-              0
-            )
-        : 0,
+    layoverMinutes,
 
     layoverAirport:
-      segments.find(
-        (segment: any) =>
-          Number(segment.layoverMinutes ?? 0) > 0
-      )?.layoverAirport,
+      layoverSegment?.layoverAirport ??
+      layoverSegment?.from,
 
     layoverLocation:
-      segments.find(
-        (segment: any) =>
-          Number(segment.layoverMinutes ?? 0) > 0
-      )?.layoverLocation,
+      layoverSegment?.layoverLocation,
 
-      
+    seats:
+      flight.seats ?? null,
 
-    seats: flight.seats ?? null,
+    cabin:
+      "Economy",
 
-    cabin: "Economy",
-
-    fareType: "Regular Fare",
+    fareType:
+      "Regular Fare",
 
     badge:
       index === 0
         ? "Best Value"
         : undefined,
 
-    searchId: flight.searchId,
+    searchId:
+      flight.searchId,
 
-    tId: flight.tId,
+    tId:
+      flight.tId,
 
-// ROUND TRIP DATA
-tripType: rawFlight.tripType,
+    /* ROUND TRIP */
+    tripType:
+      rawFlight.tripType,
 
-returnFlight:
-  rawFlight.tripType === "ROUND_TRIP" &&
-  rawFlight.returnFlight?.from &&
-  rawFlight.returnFlight?.to
-    ? {
-        id: rawFlight.returnFlight.id,
-        tId: rawFlight.returnFlight.tId,
-        airline: rawFlight.returnFlight.airline,
-        airlineCode: rawFlight.returnFlight.airlineCode,
-        from: rawFlight.returnFlight.from,
-        to: rawFlight.returnFlight.to,
-        departure: rawFlight.returnFlight.departure,
-        arrival: rawFlight.returnFlight.arrival,
-        duration: rawFlight.returnFlight.duration,
-        stops: rawFlight.returnFlight.stops,
-        price: Number(
-          rawFlight.returnFlight.price ?? 0
-        ),
-        seats: rawFlight.returnFlight.seats,
-        cabin: rawFlight.returnFlight.cabin,
-        flightNumber:
-          rawFlight.returnFlight.flightNumber,
+    returnFlight:
+      normalizedReturnFlight,
 
-        segments:
-          Array.isArray(
-            rawFlight.returnFlight?.disseg
-          )
-            ? rawFlight.returnFlight.disseg.map(
-                (segment: any) => ({
-                  from:
-                    segment.orgctco ??
-                    segment.orgapco ??
-                    segment.from ??
-                    "",
-
-                  to:
-                    segment.desctco ??
-                    segment.desapco ??
-                    segment.to ??
-                    "",
-
-                  departure:
-                    segment.deptm ??
-                    segment.departure ??
-                    undefined,
-
-                  arrival:
-                    segment.arrtm ??
-                    segment.arrival ??
-                    undefined,
-
-                  duration:
-                    segment.dur ??
-                    segment.duration ??
-                    undefined,
-
-                  flightNumber:
-                    segment.fltno ??
-                    segment.flightNumber ??
-                    undefined,
-
-                  airline:
-                    segment.airna ??
-                    segment.airline ??
-                    undefined,
-
-                  airlineCode:
-                    segment.airco ??
-                    segment.airlineCode ??
-                    undefined,
-
-                  layoverMinutes:
-                    Number(
-                      segment.laymin ?? 0
-                    ) || 0,
-
-                  layoverAirport:
-                    segment.lay ??
-                    undefined,
-
-                  layoverLocation:
-                    segment.layat ??
-                    undefined,
-                })
-              )
-            : [],
-
-        totalPrice: Number(
-          rawFlight.returnFlight.totalPrice ??
-          rawFlight.returnFlight.price ??
-          0
-        ),
-      }
-    : undefined,
-
-totalPrice,
-};
+    totalPrice,
+  };
 }
+
+
 
 /* ---------------------------------------------
    BOOK BUTTON
