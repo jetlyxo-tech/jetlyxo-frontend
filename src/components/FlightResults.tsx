@@ -121,6 +121,10 @@ type NormalizedFlight = {
   };
 };
 
+type FlightSegment = NonNullable<
+  NormalizedFlight["segments"]
+>[number];
+
 type FlightResultsProps = {
   flights: Flight[];
 
@@ -162,6 +166,124 @@ function formatLayover(minutes?: number) {
   }
 
   return `${mins}m`;
+}
+
+
+function formatFlightTime(value?: string) {
+  if (!value) {
+    return "--:--";
+  }
+
+  const raw = String(value);
+
+  // Already a simple HH:mm / HH:mm:ss value.
+  const timeMatch = raw.match(/(?:T|\s)?(\d{1,2}):(\d{2})(?::\d{2})?/);
+  if (timeMatch) {
+    return `${timeMatch[1].padStart(2, "0")}:${timeMatch[2]}`;
+  }
+
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) {
+    return raw;
+  }
+
+  return date.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+function getTimestamp(value?: string) {
+  if (!value) {
+    return null;
+  }
+
+  const raw = String(value).trim();
+
+  // Full date/time from Bonton.
+  const date = new Date(raw);
+  if (!Number.isNaN(date.getTime()) && /[-/T]/.test(raw)) {
+    return date.getTime();
+  }
+
+  return null;
+}
+
+function calculateLayoverMinutes(
+  currentArrival?: string,
+  nextDeparture?: string
+) {
+  if (!currentArrival || !nextDeparture) {
+    return 0;
+  }
+
+  const arrivalTimestamp = getTimestamp(currentArrival);
+  const departureTimestamp = getTimestamp(nextDeparture);
+
+  if (
+    arrivalTimestamp !== null &&
+    departureTimestamp !== null
+  ) {
+    const minutes = Math.round(
+      (departureTimestamp - arrivalTimestamp) / 60000
+    );
+
+    return minutes > 0 ? minutes : 0;
+  }
+
+  // Fallback when the provider gives only HH:mm values.
+  const extractMinutes = (value: string) => {
+    const match = value.match(/(\d{1,2}):(\d{2})/);
+    if (!match) {
+      return null;
+    }
+
+    return Number(match[1]) * 60 + Number(match[2]);
+  };
+
+  const arrival = extractMinutes(String(currentArrival));
+  const departure = extractMinutes(String(nextDeparture));
+
+  if (arrival === null || departure === null) {
+    return 0;
+  }
+
+  let difference = departure - arrival;
+
+  // The next flight may depart after midnight.
+  if (difference < 0) {
+    difference += 24 * 60;
+  }
+
+  return difference;
+}
+
+function getSegmentLayover(
+  segment: FlightSegment,
+  nextSegment?: FlightSegment
+) {
+  const providerMinutes = Number(
+    nextSegment?.layoverMinutes ??
+      segment.layoverMinutes ??
+      0
+  );
+
+  if (providerMinutes > 0) {
+    return providerMinutes;
+  }
+
+  return calculateLayoverMinutes(
+    segment.arrival,
+    nextSegment?.departure
+  );
+}
+
+function getSegmentAirlineName(
+  segment: FlightSegment,
+  fallback: string
+) {
+  return segment.airline || fallback || "Unknown Airline";
 }
 
 function normalizeFlight(
@@ -1636,237 +1758,269 @@ console.log(
                 </div>
 
 {/* =========================================
-    ONWARD FLIGHT
+    SEGMENT TIMELINE
 ========================================= */}
 
-<div className="mt-4">
+{(() => {
+  const renderSegmentTimeline = (
+    segments: NormalizedFlight["segments"],
+    fallbackFrom: string,
+    fallbackTo: string,
+    fallbackAirline: string,
+    theme: "onward" | "return"
+  ) => {
+    const safeSegments = Array.isArray(segments)
+      ? segments.filter(
+          (segment) => segment && (segment.from || segment.to)
+        )
+      : [];
 
-  <p className="text-xs font-semibold text-cyan-400 mb-2">
-    DEPARTURE
-  </p>
+    /*
+     * Fallback for a flight where the provider did not expose
+     * segment details. This preserves the existing nonstop UI.
+     */
+    if (!safeSegments.length) {
+      return (
+        <div className="mt-4">
+          <p
+            className={`text-xs font-semibold mb-2 ${
+              theme === "return"
+                ? "text-purple-400"
+                : "text-cyan-400"
+            }`}
+          >
+            {theme === "return" ? "RETURN" : "DEPARTURE"}
+          </p>
 
-  <div className="flex flex-wrap items-center gap-3">
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
+            <div className="flex items-center gap-3">
+              <span className="font-semibold text-white">
+                {fallbackFrom || "--"}
+              </span>
 
-    <span className="font-semibold text-white">
-      {flight.from || from || "--"}
-    </span>
+              <div className="flex-1 border-t border-dashed border-white/20" />
 
-    <div className="flex-1 min-w-[40px] border-t border-dashed border-cyan-500/40" />
+              <span
+                className={
+                  theme === "return"
+                    ? "text-purple-300 text-lg"
+                    : "text-cyan-300 text-lg"
+                }
+              >
+                ✈
+              </span>
 
-    <span className="text-cyan-300 text-lg">
-      ✈
-    </span>
+              <div className="flex-1 border-t border-dashed border-white/20" />
 
-    <div className="flex-1 min-w-[40px] border-t border-dashed border-cyan-500/40" />
-
-    <span className="font-semibold text-white">
-      {flight.to || to || "--"}
-    </span>
-
-  </div>
-
-  <div className="flex items-center gap-4 mt-2">
-
-    <span className="text-xl font-semibold text-white">
-      {flight.dep}
-    </span>
-
-    <div className="flex-1 h-px bg-white/20" />
-
-    <span className="text-sm text-white/60">
-      {flight.duration}
-    </span>
-
-  </div>
-
-  <p className="text-sm text-white/70 mt-1">
-  {flight.duration} • {flight.stops}
-</p>
-
-{/* LAYOVER DETAILS */}
-{flight.segments &&
-  flight.segments.length > 1 && (
-    <div className="mt-3 space-y-2">
-      {flight.segments
-        .slice(0, -1)
-        .map((segment, index) => {
-          const nextSegment =
-            flight.segments?.[index + 1];
-
-          const layoverMinutes =
-            nextSegment?.layoverMinutes ??
-            segment.layoverMinutes ??
-            0;
-
-          const layoverAirport =
-            nextSegment?.from ||
-            segment.layoverAirport;
-
-          const layoverLocation =
-            segment.layoverLocation;
-
-          if (!layoverMinutes && !layoverAirport) {
-            return null;
-          }
-
-          return (
-            <div
-              key={index}
-              className="rounded-xl bg-white/5 border border-white/10 px-4 py-3"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-yellow-400">
-                  ⏱
-                </span>
-
-                <span className="text-sm font-medium text-white">
-                  {layoverAirport
-                    ? `Layover at ${layoverAirport}`
-                    : "Layover"}
-                </span>
-              </div>
-
-              {layoverLocation && (
-                <p className="text-xs text-white/50 mt-1">
-                  {layoverLocation}
-                </p>
-              )}
-
-              {layoverMinutes > 0 && (
-                <p className="text-xs text-cyan-300 mt-1">
-                  {formatLayover(layoverMinutes)}
-                </p>
-              )}
+              <span className="font-semibold text-white">
+                {fallbackTo || "--"}
+              </span>
             </div>
-          );
-        })}
-    </div>
-  )}
+          </div>
+        </div>
+      );
+    }
 
-</div>
+    return (
+      <div className="mt-4">
+        <p
+          className={`text-xs font-semibold mb-3 ${
+            theme === "return"
+              ? "text-purple-400"
+              : "text-cyan-400"
+          }`}
+        >
+          {theme === "return" ? "RETURN" : "DEPARTURE"}
+        </p>
 
+        <div className="space-y-0">
+          {safeSegments.map((segment, index) => {
+            const nextSegment = safeSegments[index + 1];
 
-{/* =========================================
-    RETURN FLIGHT
-========================================= */}
+            const layoverMinutes = nextSegment
+              ? getSegmentLayover(segment, nextSegment)
+              : 0;
 
-{flight.returnFlight && (
-  <div className="mt-5 pt-4 border-t border-white/10">
+            const layoverAirport =
+              nextSegment?.from ||
+              segment.layoverAirport ||
+              "";
 
-    <p className="text-xs font-semibold text-purple-400 mb-2">
-      RETURN
-    </p>
+            const layoverLocation =
+              segment.layoverLocation ||
+              nextSegment?.layoverLocation ||
+              "";
 
-    <div className="flex flex-wrap items-center gap-3">
+            const airlineName = getSegmentAirlineName(
+              segment,
+              fallbackAirline
+            );
 
-      <span className="font-semibold text-white">
-        {flight.returnFlight.from || "--"}
-      </span>
+            return (
+              <div key={`${segment.from}-${segment.to}-${index}`}>
+                {/* FLIGHT SEGMENT */}
+                <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
+                  <div className="grid grid-cols-[70px_1fr] sm:grid-cols-[80px_1fr] gap-4">
+                    {/* Departure */}
+                    <div>
+                      <p className="text-xl font-bold text-white">
+                        {formatFlightTime(segment.departure)}
+                      </p>
+                      <p className="text-sm font-semibold text-cyan-200 mt-1">
+                        {segment.from || "--"}
+                      </p>
+                    </div>
 
-      <div className="flex-1 min-w-[40px] border-t border-dashed border-purple-500/40" />
+                    {/* Segment details */}
+                    <div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                          <Image
+                            src={
+                              airlineLogos[airlineName] ??
+                              "/airlines/default.png"
+                            }
+                            alt={airlineName}
+                            width={28}
+                            height={28}
+                            className="object-contain"
+                          />
+                        </div>
 
-      <span className="text-purple-300 text-lg">
-        ✈
-      </span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-white truncate">
+                            {airlineName}
+                          </p>
 
-      <div className="flex-1 min-w-[40px] border-t border-dashed border-purple-500/40" />
+                          <p className="text-xs text-white/50 mt-0.5">
+                            {segment.flightNumber
+                              ? `${segment.airlineCode || ""}${
+                                  segment.airlineCode
+                                    ? "-"
+                                    : ""
+                                }${segment.flightNumber}`
+                              : "Flight number unavailable"}
+                          </p>
+                        </div>
+                      </div>
 
-      <span className="font-semibold text-white">
-        {flight.returnFlight.to || "--"}
-      </span>
+                      <div className="flex items-center gap-3 mt-4">
+                        <div
+                          className={`w-2.5 h-2.5 rounded-full ${
+                            theme === "return"
+                              ? "bg-purple-400"
+                              : "bg-cyan-400"
+                          }`}
+                        />
 
-    </div>
+                        <div className="flex-1 border-t border-dashed border-white/20" />
 
-    <div className="flex items-center gap-4 mt-2">
+                        <span
+                          className={
+                            theme === "return"
+                              ? "text-purple-300"
+                              : "text-cyan-300"
+                          }
+                        >
+                          ✈
+                        </span>
 
-      <span className="text-xl font-semibold text-white">
-        {flight.returnFlight.departure
-          ? new Date(flight.returnFlight.departure)
-              .toLocaleTimeString("en-IN", {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: false,
-              })
-          : "--:--"}
-      </span>
+                        <div className="flex-1 border-t border-dashed border-white/20" />
 
-      <div className="flex-1 h-px bg-white/20" />
+                        <div
+                          className={`w-2.5 h-2.5 rounded-full ${
+                            theme === "return"
+                              ? "bg-purple-400"
+                              : "bg-cyan-400"
+                          }`}
+                        />
+                      </div>
 
-      <span className="text-sm text-white/60">
-        {flight.returnFlight.duration || "N/A"}
-      </span>
+                      <div className="flex items-center justify-between mt-2">
+                        <p className="text-xs text-white/50">
+                          {segment.duration || "Duration unavailable"}
+                        </p>
 
-    </div>
+                        <p className="text-xs text-white/50">
+                          Arrives{" "}
+                          <span className="text-white/80 font-medium">
+                            {formatFlightTime(segment.arrival)}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-    <p className="text-sm text-white/70 mt-1">
-      {flight.returnFlight.duration || "N/A"}
-      {" • "}
-      {flight.returnFlight.stops === 0
-        ? "Non-stop"
-        : `${flight.returnFlight.stops ?? 0} Stop`}
-    </p>
+                {/* LAYOVER / CHANGE OF PLANES */}
+                {nextSegment && (
+                  <div className="relative py-3">
+                    <div className="absolute left-[38px] sm:left-[43px] top-0 bottom-0 border-l border-dashed border-yellow-500/40" />
 
-{flight.returnFlight.segments &&
-  flight.returnFlight.segments.length > 1 && (
-    <div className="mt-3 space-y-2">
-      {flight.returnFlight.segments
-        .slice(0, -1)
-        .map((segment, index) => {
-          const nextSegment =
-            flight.returnFlight?.segments?.[index + 1];
+                    <div className="relative ml-16 sm:ml-[68px] rounded-xl bg-yellow-500/10 border border-yellow-500/20 px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-yellow-400">
+                          ⏱
+                        </span>
 
-          const layoverMinutes =
-            nextSegment?.layoverMinutes ??
-            segment.layoverMinutes ??
-            0;
+                        <span className="text-sm font-semibold text-white">
+                          Change of planes
+                        </span>
+                      </div>
 
-          const layoverAirport =
-            nextSegment?.from ||
-            segment.layoverAirport;
+                      <p className="text-sm text-cyan-300 font-medium mt-1">
+                        {layoverMinutes > 0
+                          ? `${formatLayover(
+                              layoverMinutes
+                            )} layover`
+                          : "Layover"}
+                      </p>
 
-          const layoverLocation =
-            segment.layoverLocation;
-
-          if (!layoverMinutes && !layoverAirport) {
-            return null;
-          }
-
-          return (
-            <div
-              key={index}
-              className="rounded-xl bg-white/5 border border-white/10 px-4 py-3"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-yellow-400">
-                  ⏱
-                </span>
-
-                <span className="text-sm font-medium text-white">
-                  {layoverAirport
-                    ? `Layover at ${layoverAirport}`
-                    : "Layover"}
-                </span>
+                      <p className="text-xs text-white/60 mt-1">
+                        {layoverLocation
+                          ? `Layover in ${layoverLocation}`
+                          : layoverAirport
+                          ? `Layover at ${layoverAirport}`
+                          : "Connecting flight"}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
 
-              {layoverLocation && (
-                <p className="text-xs text-white/50 mt-1">
-                  {layoverLocation}
-                </p>
-              )}
+  return (
+    <>
+      {/* OUTBOUND */}
+      {renderSegmentTimeline(
+        flight.segments ?? [],
+        flight.from || from || "",
+        flight.to || to || "",
+        flight.airline,
+        "onward"
+      )}
 
-              {layoverMinutes > 0 && (
-                <p className="text-xs text-cyan-300 mt-1">
-                  {formatLayover(layoverMinutes)}
-                </p>
-              )}
-            </div>
-          );
-        })}
-    </div>
-  )}
+      {/* ROUND-TRIP RETURN */}
+      {flight.returnFlight && (
+        <div className="mt-6 pt-5 border-t border-white/10">
+          {renderSegmentTimeline(
+            flight.returnFlight.segments ?? [],
+            flight.returnFlight.from || "",
+            flight.returnFlight.to || "",
+            flight.returnFlight.airline || flight.airline,
+            "return"
+          )}
+        </div>
+      )}
+    </>
+  );
+})()}
 
-  </div>
-)}
                 {/* SEATS */}
                 <p
                   className={`text-sm mt-2 font-medium ${
