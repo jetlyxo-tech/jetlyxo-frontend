@@ -283,11 +283,7 @@ function getSegmentAirlineName(
   segment: FlightSegment,
   fallback: string
 ) {
-  return (
-    segment.airline ||
-    fallback ||
-    "Unknown Airline"
-  );
+  return segment.airline || fallback || "Unknown Airline";
 }
 
 function normalizeFlight(
@@ -415,7 +411,7 @@ function normalizeFlight(
      STOPS
   --------------------------------------------- */
 
- const stopCount =
+  const stopCount =
     typeof flight.stops === "number"
       ? flight.stops
       : Math.max(segments.length - 1, 0);
@@ -492,15 +488,11 @@ function normalizeFlight(
       tId: rawReturn.tId,
 
       airline:
-        rawReturn.airline ||
-        rawReturn.airna ||
-        returnSegments[0]?.airline ||
+        rawReturn.airline ??
         "",
 
       airlineCode:
-        rawReturn.airlineCode ||
-        rawReturn.airco ||
-        returnSegments[0]?.airlineCode ||
+        rawReturn.airlineCode ??
         "",
 
       from: returnFrom,
@@ -586,21 +578,16 @@ function normalizeFlight(
      FINAL NORMALIZED FLIGHT
   --------------------------------------------- */
 
- return {
-  id: flight.id ?? index,
+  return {
+    id: flight.id ?? index,
 
-  airline:
-    rawFlight.airline ||
-    rawFlight.airna ||
-    rawFlight.airlineName ||
-    segments[0]?.airline ||
-    "Unknown Airline",
+    airline:
+      flight.airline ||
+      "Unknown Airline",
 
-  airlineCode:
-    rawFlight.airlineCode ||
-    rawFlight.airco ||
-    segments[0]?.airlineCode ||
-    "",
+    airlineCode:
+      (flight as any).airlineCode ||
+      "",
 
     /*
       IMPORTANT:
@@ -630,9 +617,7 @@ function normalizeFlight(
     stops:
       stopCount === 0
         ? "Non-stop"
-        : `${stopCount} ${
-             stopCount === 1 ? "Stop" : "Stops"
-      }`,
+        : `${stopCount} Stop`,
 
     segments,
 
@@ -848,6 +833,7 @@ export default function FlightResults({
 /* ---------------------------------------------
    BONTON NEXT FILTER BUILDER
 --------------------------------------------- */
+
 const buildNextFilters = ({
   nextSelectedAirlines = selectedAirlines,
   nextNonStop = filters.nonStop,
@@ -860,40 +846,19 @@ const buildNextFilters = ({
   nextPriceLimit?: number;
 } = {}) => {
   const nextFilters: {
-    minp: number;
-    maxp: number;
-    ischp: boolean;
-    isqck: boolean;
-    isqckdep: boolean;
-    isqckarr: boolean;
-    isrf: boolean;
-    isnrf: boolean;
-    ishld: boolean;
+    minp?: number;
+    maxp?: number;
     air?: {
       airline_code: string;
       airline_name: string;
     }[];
     stp?: number[];
-    deptm?: string[];
   } = {
     minp: 0,
-    maxp:
-      nextPriceLimit > 0
-        ? nextPriceLimit
-        : 100000,
-
-    ischp: false,
-    isqck: false,
-    isqckdep: false,
-    isqckarr: false,
-    isrf: false,
-    isnrf: false,
-    ishld: false,
+    maxp: nextPriceLimit,
   };
 
-  /*
-   * AIRLINE
-   */
+  // Airline
   if (nextSelectedAirlines.length > 0) {
     const airlineMap = new Map<
       string,
@@ -916,13 +881,11 @@ const buildNextFilters = ({
     });
 
     if (airlineMap.size > 0) {
-      nextFilters.air = Array.from(
-        airlineMap.values()
-      );
+      nextFilters.air = Array.from(airlineMap.values());
     }
   }
 
-  
+  // Stops
   if (nextNonStop || nextOneStop) {
     const stops: number[] = [];
 
@@ -939,6 +902,7 @@ const buildNextFilters = ({
 
   return nextFilters;
 };
+
 
 /* ---------------------------------------------
    LOAD MORE FLIGHTS — BONTON NEXT
@@ -992,14 +956,6 @@ try {
 
     const newFlights = response.flights ?? [];
 
-    if (response.stid) {
-      setSearchStid(response.stid);
-    }
-
-    setHasMoreFlights(
-      response.isComplete !== true
-);
-
     console.log(
       "========== NEXT FLIGHTS RECEIVED =========="
     );
@@ -1028,7 +984,6 @@ try {
 
           stid:
             (flight as any).stid ||
-            response.stid ||
             searchStid,
         })
       );
@@ -1125,6 +1080,7 @@ console.log(
 
 
 
+
 const applyProviderFilters = useCallback(
   async ({
     nextSelectedAirlines = selectedAirlines,
@@ -1138,23 +1094,22 @@ const applyProviderFilters = useCallback(
     nextPriceLimit?: number;
   } = {}) => {
     if (!searchStid) {
-      toast.error(
-        "Flight search session is missing"
-      );
-      return;
-    }
+      toast.error("Flight search session is missing");
+       return;
+}
 
     if (nextRequestInProgress.current) {
       console.log(
-        "[Bonton Next] Request already in progress"
-      );
-      return;
-    }
+       "Next request already in progress — skipping duplicate call"
+  );
+       return;
+}
 
-    nextRequestInProgress.current = true;
-    setLoadingMore(true);
+nextRequestInProgress.current = true;
 
-    try {
+try {
+  setLoadingMore(true);
+
       const nextFilters = buildNextFilters({
         nextSelectedAirlines,
         nextNonStop,
@@ -1162,21 +1117,15 @@ const applyProviderFilters = useCallback(
         nextPriceLimit,
       });
 
-      console.log(
-        "========== BONTON NEXT FILTER REQUEST =========="
-      );
-
-      console.dir(
-        {
-          stid: searchStid,
-          filters: nextFilters,
-          skip: 0,
-          take: 20,
-          isdom: true,
-          isret: false,
-        },
-        { depth: null }
-      );
+      console.log("========== APPLY BONTON FILTERS ==========");
+      console.log({
+        stid: searchStid,
+        filters: nextFilters,
+        skip: 0,
+        take: 20,
+        isdom: true,
+        isret: false,
+      });
 
       const response = await nextFlights({
         stid: searchStid,
@@ -1187,88 +1136,73 @@ const applyProviderFilters = useCallback(
         isret: false,
       });
 
-      console.log(
-        "========== BONTON NEXT FILTER RESPONSE =========="
-      );
+      const newFlights = response.flights ?? [];
+     
+      const enrichedFlights = newFlights.map((flight) => ({
+  ...flight,
+  stid: (flight as any).stid || searchStid,
+}));
 
-      console.dir(response, {
-        depth: null,
-      });
+/*
+ * Bonton should apply the stop filter server-side,
+ * but we enforce it locally as well so the UI never
+ * displays flights that do not match the selected filter.
+ */
+const filteredProviderFlights = enrichedFlights.filter(
+  (flight: any) => {
+    const segments =
+      flight.segments ??
+      flight.disseg ??
+      flight.fltseg ??
+      [];
 
-      const newFlights = Array.isArray(response?.flights)
-         ? response.flights
-         : [];
+    const stopCount =
+      typeof flight.stops === "number"
+        ? flight.stops
+        : Math.max(segments.length - 1, 0);
 
-      console.log(
-        "[Bonton Next] Flights received:",
-        newFlights.length
-      );
+    if (nextNonStop && !nextOneStop) {
+      return stopCount === 0;
+    }
 
-      /*
-       * IMPORTANT:
-       *
-       * Do NOT filter these flights again locally.
-       *
-       * Bonton /next has already applied the
-       * requested filters.
-       */
-      const enrichedFlights =
-        newFlights.map((flight: Flight) => ({
-          ...flight,
+    if (nextOneStop && !nextNonStop) {
+      return stopCount === 1;
+    }
 
-          stid:
-            (flight as any).stid ||
-            response?.stid ||
-            searchStid,
+    if (nextNonStop && nextOneStop) {
+      return stopCount === 0 || stopCount === 1;
+    }
 
-          searchId:
-            (flight as any).searchId ||
-            response?.searchId ||
-            flightList[0]?.searchId ||
-            "",
-        }));
+    return true;
+  }
+);
 
-      /*
-       * If Bonton returns zero flights, keep the
-       * response empty. Do not invent/filter the
-       * original search results.
-       */
-      setFlightList(enrichedFlights);
 
-      if (response?.stid) {
-        setSearchStid(response.stid);
-      }
+setFlightList(filteredProviderFlights);
 
-      /*
-       * /next response tells us whether more
-       * records are available.
-       */
-      setHasMoreFlights(
-        response?.isComplete !== true
-      );
+console.log(
+  "========== FILTERED FLIGHTS RECEIVED ==========",
+  {
+    received: enrichedFlights.length,
+    afterStopFilter: filteredProviderFlights.length,
+    nonStop: nextNonStop,
+    oneStop: nextOneStop,
+  }
+);
+     
 
-      /*
-       * The next filtered result starts from
-       * the beginning of the filtered dataset.
-       */
-      setNextSkip(
-        enrichedFlights.length
-      );
-
-      console.log(
-        "========== BONTON NEXT APPLIED ==========",
-        {
-          received: enrichedFlights.length,
-          stid:
-            response?.stid ||
-            searchStid,
-          complete:
-            response?.isComplete,
-        }
-      );
+    console.log(
+  "========== FILTERED FLIGHTS RECEIVED ==========",
+  {
+    received: enrichedFlights.length,
+    afterStopFilter: filteredProviderFlights.length,
+    nonStop: nextNonStop,
+    oneStop: nextOneStop,
+  }
+);
     } catch (error) {
       console.error(
-        "========== BONTON NEXT ERROR ==========",
+        "Apply Provider Filters Error:",
         error
       );
 
@@ -1278,9 +1212,9 @@ const applyProviderFilters = useCallback(
           : "Unable to apply flight filters"
       );
     } finally {
-      setLoadingMore(false);
-      nextRequestInProgress.current = false;
-    }
+  setLoadingMore(false);
+  nextRequestInProgress.current = false;
+}
   },
   [
     searchStid,
@@ -1288,10 +1222,10 @@ const applyProviderFilters = useCallback(
     filters.nonStop,
     filters.oneStop,
     priceLimit,
-    flightList,
     normalizedFlights,
   ]
 );
+
 
 
 /* ---------------------------------------------
@@ -1301,6 +1235,26 @@ const applyProviderFilters = useCallback(
   const filteredFlights =
     useMemo(() => {
       let list = [...normalizedFlights];
+
+      
+     if (filters.nonStop || filters.oneStop) {
+       list = list.filter((f) => {
+         const isNonStop = f.stops === "Non-stop";
+         const isOneStop = f.stops === "1 Stop";
+
+         return (
+          (filters.nonStop && isNonStop) ||
+          (filters.oneStop && isOneStop)
+    );
+  });
+}
+      if (selectedAirlines.length) {
+        list = list.filter((f) =>
+          selectedAirlines.includes(
+            f.airline
+          )
+        );
+      }
 
       if (filters.earlyMorning) {
         list = list.filter((f) => {
@@ -1333,6 +1287,11 @@ const applyProviderFilters = useCallback(
           return hr >= 18;
         });
       }
+
+      list = list.filter(
+        (f) =>
+          f.priceNumber <= priceLimit
+      );
 
       return list;
     }, [
@@ -1496,59 +1455,68 @@ const applyProviderFilters = useCallback(
 
         </div>
 
-       <div className="mb-8">
-  <h4 className="font-semibold text-white mb-4">
-    Stops
-  </h4>
+        {/* STOPS */}
 
-  <div className="space-y-3">
-    {/* NON STOP */}
-    <label className="flex items-center gap-3 cursor-pointer text-white">
-      <input
-        type="checkbox"
-        checked={filters.nonStop}
-        onChange={() => {
-          const nextValue = !filters.nonStop;
+        <div className="mb-8">
 
-          setFilters((prev) => ({
-            ...prev,
-            nonStop: nextValue,
-          }));
+          <h4 className="font-semibold text-white mb-4">
+            Stops
+          </h4>
 
-          applyProviderFilters({
-            nextNonStop: nextValue,
-            nextOneStop: filters.oneStop,
-          });
-        }}
-      />
+          <div className="space-y-3">
 
-      Non Stop
-    </label>
+            <label className="flex items-center gap-3 cursor-pointer text-white">
 
-    {/* ONE STOP */}
-    <label className="flex items-center gap-3 cursor-pointer text-white">
-      <input
-        type="checkbox"
-        checked={filters.oneStop}
-        onChange={() => {
-          const nextValue = !filters.oneStop;
+              <input
+                type="checkbox"
+                checked={filters.nonStop}
+                onChange={() => {
+  const nextValue = !filters.nonStop;
 
-          setFilters((prev) => ({
-            ...prev,
-            oneStop: nextValue,
-          }));
+  setFilters((prev) => ({
+    ...prev,
+    nonStop: nextValue,
+  }));
 
-          applyProviderFilters({
-            nextNonStop: filters.nonStop,
-            nextOneStop: nextValue,
-          });
-        }}
-      />
+  applyProviderFilters({
+    nextNonStop: nextValue,
+    nextOneStop: filters.oneStop,
+  });
+}}
+              />
 
-      1 Stop
-    </label>
-  </div>
-</div>
+              Non Stop
+
+            </label>
+
+            <label className="flex items-center gap-3 cursor-pointer text-white">
+
+              <input
+                type="checkbox"
+                checked={filters.oneStop}
+                
+             onChange={() => {
+  const nextValue = !filters.oneStop;
+
+  setFilters((prev) => ({
+    ...prev,
+    oneStop: nextValue,
+  }));
+
+  applyProviderFilters({
+    nextNonStop: filters.nonStop,
+    nextOneStop: nextValue,
+  });
+}}
+              />
+
+              1 Stop
+
+            </label>
+
+          </div>
+
+        </div>
 
         {/* DEPARTURE */}
 
