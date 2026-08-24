@@ -1007,22 +1007,57 @@ try {
       });
 
       const newFlights = response.flights ?? [];
-
+     
       const enrichedFlights = newFlights.map((flight) => ({
-        ...flight,
-        stid: (flight as any).stid || searchStid,
-      }));
+  ...flight,
+  stid: (flight as any).stid || searchStid,
+}));
 
-      setFlightList(enrichedFlights);
+/*
+ * Bonton should apply the stop filter server-side,
+ * but we enforce it locally as well so the UI never
+ * displays flights that do not match the selected filter.
+ */
+const filteredProviderFlights = enrichedFlights.filter(
+  (flight: any) => {
+    const segments =
+      flight.segments ??
+      flight.disseg ??
+      flight.fltseg ??
+      [];
 
-      setNextSkip(enrichedFlights.length);
+    const stopCount =
+      typeof flight.stops === "number"
+        ? flight.stops
+        : Math.max(segments.length - 1, 0);
 
-      setHasMoreFlights(enrichedFlights.length > 0);
+    if (nextNonStop && !nextOneStop) {
+      return stopCount === 0;
+    }
 
-      console.log(
-        "========== FILTERED FLIGHTS RECEIVED ==========",
-        enrichedFlights.length
-      );
+    if (nextOneStop && !nextNonStop) {
+      return stopCount === 1;
+    }
+
+    if (nextNonStop && nextOneStop) {
+      return stopCount === 0 || stopCount === 1;
+    }
+
+    return true;
+  }
+);
+
+     
+
+    console.log(
+  "========== FILTERED FLIGHTS RECEIVED ==========",
+  {
+    received: enrichedFlights.length,
+    afterStopFilter: filteredProviderFlights.length,
+    nonStop: nextNonStop,
+    oneStop: nextOneStop,
+  }
+);
     } catch (error) {
       console.error(
         "Apply Provider Filters Error:",
@@ -1057,18 +1092,18 @@ try {
     useMemo(() => {
       let list = [...normalizedFlights];
 
-      if (filters.nonStop) {
-        list = list.filter((f) =>
-          f.stops.includes("Non")
-        );
-      }
+      
+     if (filters.nonStop || filters.oneStop) {
+       list = list.filter((f) => {
+         const isNonStop = f.stops === "Non-stop";
+         const isOneStop = f.stops === "1 Stop";
 
-      if (filters.oneStop) {
-        list = list.filter((f) =>
-          f.stops.includes("1")
-        );
-      }
-
+         return (
+          (filters.nonStop && isNonStop) ||
+          (filters.oneStop && isOneStop)
+    );
+  });
+}
       if (selectedAirlines.length) {
         list = list.filter((f) =>
           selectedAirlines.includes(
