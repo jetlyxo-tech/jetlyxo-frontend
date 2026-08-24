@@ -283,7 +283,11 @@ function getSegmentAirlineName(
   segment: FlightSegment,
   fallback: string
 ) {
-  return segment.airline || fallback || "Unknown Airline";
+  return (
+    segment.airline ||
+    fallback ||
+    "Unknown Airline"
+  );
 }
 
 function normalizeFlight(
@@ -494,11 +498,15 @@ function normalizeFlight(
       tId: rawReturn.tId,
 
       airline:
-        rawReturn.airline ??
+        rawReturn.airline ||
+        rawReturn.airna ||
+        returnSegments[0]?.airline ||
         "",
 
       airlineCode:
-        rawReturn.airlineCode ??
+        rawReturn.airlineCode ||
+        rawReturn.airco ||
+        returnSegments[0]?.airlineCode ||
         "",
 
       from: returnFrom,
@@ -584,16 +592,21 @@ function normalizeFlight(
      FINAL NORMALIZED FLIGHT
   --------------------------------------------- */
 
-  return {
-    id: flight.id ?? index,
+ return {
+  id: flight.id ?? index,
 
-    airline:
-      flight.airline ||
-      "Unknown Airline",
+  airline:
+    rawFlight.airline ||
+    rawFlight.airna ||
+    rawFlight.airlineName ||
+    segments[0]?.airline ||
+    "Unknown Airline",
 
-    airlineCode:
-      (flight as any).airlineCode ||
-      "",
+  airlineCode:
+    rawFlight.airlineCode ||
+    rawFlight.airco ||
+    segments[0]?.airlineCode ||
+    "",
 
     /*
       IMPORTANT:
@@ -623,7 +636,9 @@ function normalizeFlight(
     stops:
       stopCount === 0
         ? "Non-stop"
-        : `${stopCount} Stop`,
+        : `${stopCount} ${
+             stopCount === 1 ? "Stop" : "Stops"
+      }`,
 
     segments,
 
@@ -1174,16 +1189,18 @@ const filteredProviderFlights = enrichedFlights.filter(
       flight.fltseg ??
       [];
 
-  const stopCount =
-   typeof flight.stops === "number"
+const stopCount =
+  typeof flight.stops === "number"
     ? flight.stops
-    : flight.stopov === true
-      ? Math.max(segments.length, 1)
-      : flight.lay ||
-        flight.layat ||
-        Number(flight.laymin ?? 0) > 0
+    : segments.length > 0
+      ? Math.max(segments.length - 1, 0)
+      : flight.stopov === true
         ? 1
-        : Math.max(segments.length - 1, 0);
+        : flight.lay ||
+          flight.layat ||
+          Number(flight.laymin ?? 0) > 0
+          ? 1
+          : 0;
 
     if (nextNonStop && !nextOneStop) {
       return stopCount === 0;
