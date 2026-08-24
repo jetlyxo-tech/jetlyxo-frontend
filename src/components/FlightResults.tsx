@@ -416,15 +416,9 @@ function normalizeFlight(
   --------------------------------------------- */
 
  const stopCount =
-  typeof flight.stops === "number"
-    ? flight.stops
-    : rawFlight.stopov === true
-      ? Math.max(segments.length, 1)
-      : rawFlight.lay ||
-        rawFlight.layat ||
-        Number(rawFlight.laymin ?? 0) > 0
-        ? 1
-        : Math.max(segments.length - 1, 0);
+    typeof flight.stops === "number"
+      ? flight.stops
+      : Math.max(segments.length - 1, 0);
 
   /* ---------------------------------------------
      LAYOVER DATA
@@ -1190,17 +1184,9 @@ const filteredProviderFlights = enrichedFlights.filter(
       [];
 
 const stopCount =
-  typeof flight.stops === "number"
-    ? flight.stops
-    : segments.length > 0
-      ? Math.max(segments.length - 1, 0)
-      : flight.stopov === true
-        ? 1
-        : flight.lay ||
-          flight.layat ||
-          Number(flight.laymin ?? 0) > 0
-          ? 1
-          : 0;
+      typeof flight.stops === "number"
+        ? flight.stops
+        : Math.max(segments.length - 1, 0);
 
     if (nextNonStop && !nextOneStop) {
       return stopCount === 0;
@@ -1518,6 +1504,11 @@ console.log(
     ...prev,
     nonStop: nextValue,
   }));
+
+  applyProviderFilters({
+    nextNonStop: nextValue,
+    nextOneStop: filters.oneStop,
+  });
 }}
               />
 
@@ -1538,6 +1529,11 @@ console.log(
     ...prev,
     oneStop: nextValue,
   }));
+
+  applyProviderFilters({
+    nextNonStop: filters.nonStop,
+    nextOneStop: nextValue,
+  });
 }}
               />
 
