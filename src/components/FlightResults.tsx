@@ -1494,18 +1494,13 @@ console.log(
               <input
                 type="checkbox"
                 checked={filters.nonStop}
-                onChange={() => {
+                 onChange={() => {
   const nextValue = !filters.nonStop;
 
   setFilters((prev) => ({
     ...prev,
     nonStop: nextValue,
   }));
-
-  applyProviderFilters({
-    nextNonStop: nextValue,
-    nextOneStop: filters.oneStop,
-  });
 }}
               />
 
@@ -1519,18 +1514,13 @@ console.log(
                 type="checkbox"
                 checked={filters.oneStop}
                 
-             onChange={() => {
+              onChange={() => {
   const nextValue = !filters.oneStop;
 
   setFilters((prev) => ({
     ...prev,
     oneStop: nextValue,
   }));
-
-  applyProviderFilters({
-    nextNonStop: filters.nonStop,
-    nextOneStop: nextValue,
-  });
 }}
               />
 
