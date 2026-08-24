@@ -196,11 +196,20 @@ async function fetchFlightSearchApi(
     ) || null;
 
   const flights = flightChunks.flatMap(
-    (chunk) =>
-      Array.isArray(chunk?.data)
-        ? chunk.data
-        : []
-  );
+  (chunk) => {
+    if (Array.isArray(chunk?.data)) {
+      return chunk.data;
+    }
+
+    if (
+      Array.isArray(chunk?.data?.flights)
+    ) {
+      return chunk.data.flights;
+    }
+
+    return [];
+  }
+);
 
   return {
     success: true,
