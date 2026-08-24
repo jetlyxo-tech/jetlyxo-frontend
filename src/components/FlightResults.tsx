@@ -1276,29 +1276,11 @@ const filteredProviderFlights = enrichedFlights.filter(
   value={priceLimit}
   step={100}
   onChange={(e) => {
-    const value = Number(e.target.value);
-    setPriceLimit(value);
-  }}
-  onMouseUp={(e) => {
-    const value = Number(
-      e.currentTarget.value
-    );
-
-    applyProviderFilters({
-      nextPriceLimit: value,
-    });
-  }}
-  onTouchEnd={(e) => {
-    const value = Number(
-      e.currentTarget.value
-    );
-
-    applyProviderFilters({
-      nextPriceLimit: value,
-    });
+    setPriceLimit(Number(e.target.value));
   }}
   className="w-full accent-cyan-500"
-/>     
+/>
+   
 
           <div className="flex justify-between mt-3 text-sm text-white/60">
 
