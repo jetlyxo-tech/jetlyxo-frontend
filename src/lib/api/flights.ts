@@ -395,6 +395,7 @@ export interface NextFlightResponse {
   searchId?: string;
   stid?: string;
   count?: number;
+  isComplete?: boolean;
   flights?: Flight[];
   raw?: unknown;
 }

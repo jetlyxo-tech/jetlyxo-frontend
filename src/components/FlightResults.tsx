@@ -956,6 +956,14 @@ try {
 
     const newFlights = response.flights ?? [];
 
+    if (response.stid) {
+      setSearchStid(response.stid);
+    }
+
+    setHasMoreFlights(
+      response.isComplete !== true
+);
+
     console.log(
       "========== NEXT FLIGHTS RECEIVED =========="
     );
@@ -984,6 +992,7 @@ try {
 
           stid:
             (flight as any).stid ||
+            response.stid ||
             searchStid,
         })
       );
@@ -1140,7 +1149,10 @@ try {
      
       const enrichedFlights = newFlights.map((flight) => ({
   ...flight,
-  stid: (flight as any).stid || searchStid,
+  stid:
+    (flight as any).stid ||
+    response.stid ||
+    searchStid,
 }));
 
 /*
