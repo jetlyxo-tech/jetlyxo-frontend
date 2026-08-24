@@ -283,7 +283,11 @@ function getSegmentAirlineName(
   segment: FlightSegment,
   fallback: string
 ) {
-  return segment.airline || fallback || "Unknown Airline";
+  return (
+    segment.airline ||
+    fallback ||
+    "Unknown Airline"
+  );
 }
 
 function normalizeFlight(
@@ -411,7 +415,7 @@ function normalizeFlight(
      STOPS
   --------------------------------------------- */
 
-  const stopCount =
+ const stopCount =
     typeof flight.stops === "number"
       ? flight.stops
       : Math.max(segments.length - 1, 0);
@@ -488,11 +492,15 @@ function normalizeFlight(
       tId: rawReturn.tId,
 
       airline:
-        rawReturn.airline ??
+        rawReturn.airline ||
+        rawReturn.airna ||
+        returnSegments[0]?.airline ||
         "",
 
       airlineCode:
-        rawReturn.airlineCode ??
+        rawReturn.airlineCode ||
+        rawReturn.airco ||
+        returnSegments[0]?.airlineCode ||
         "",
 
       from: returnFrom,
@@ -578,16 +586,21 @@ function normalizeFlight(
      FINAL NORMALIZED FLIGHT
   --------------------------------------------- */
 
-  return {
-    id: flight.id ?? index,
+ return {
+  id: flight.id ?? index,
 
-    airline:
-      flight.airline ||
-      "Unknown Airline",
+  airline:
+    rawFlight.airline ||
+    rawFlight.airna ||
+    rawFlight.airlineName ||
+    segments[0]?.airline ||
+    "Unknown Airline",
 
-    airlineCode:
-      (flight as any).airlineCode ||
-      "",
+  airlineCode:
+    rawFlight.airlineCode ||
+    rawFlight.airco ||
+    segments[0]?.airlineCode ||
+    "",
 
     /*
       IMPORTANT:
@@ -617,7 +630,9 @@ function normalizeFlight(
     stops:
       stopCount === 0
         ? "Non-stop"
-        : `${stopCount} Stop`,
+        : `${stopCount} ${
+             stopCount === 1 ? "Stop" : "Stops"
+      }`,
 
     segments,
 
@@ -747,6 +762,8 @@ export default function FlightResults({
 }: FlightResultsProps) {
   const [flightList, setFlightList] =
     useState<Flight[]>(flights);
+  const [originalFlights, setOriginalFlights] =
+    useState<Flight[]>(flights);
 
   const [sortBy, setSortBy] =
     useState<(typeof SORT_OPTIONS)[number]>(
@@ -790,16 +807,16 @@ export default function FlightResults({
   const nextRequestInProgress = useRef(false);
   const priceInitialized = useRef(false);
 
-  useEffect(() => {
+ useEffect(() => {
   priceInitialized.current = false;
+
   setFlightList(flights);
+  setOriginalFlights(flights);
 
   const firstFlight = flights[0] as any;
 
   setSearchStid(firstFlight?.stid ?? "");
-
   setNextSkip(flights.length);
-
   setHasMoreFlights(true);
 }, [flights]);
 
@@ -868,7 +885,9 @@ const buildNextFilters = ({
       }
     >();
 
-    normalizedFlights.forEach((flight) => {
+   originalFlights
+       .map((flight, index) => normalizeFlight(flight, index))
+       .forEach((flight) => {
       if (
         nextSelectedAirlines.includes(flight.airline) &&
         flight.airlineCode
@@ -956,6 +975,14 @@ try {
 
     const newFlights = response.flights ?? [];
 
+    if (response.stid) {
+      setSearchStid(response.stid);
+    }
+
+    setHasMoreFlights(
+      response.isComplete !== true
+);
+
     console.log(
       "========== NEXT FLIGHTS RECEIVED =========="
     );
@@ -984,6 +1011,7 @@ try {
 
           stid:
             (flight as any).stid ||
+            response.stid ||
             searchStid,
         })
       );
@@ -1138,53 +1166,32 @@ try {
 
       const newFlights = response.flights ?? [];
      
-      const enrichedFlights = newFlights.map((flight) => ({
+const enrichedFlights = newFlights.map((flight) => ({
   ...flight,
-  stid: (flight as any).stid || searchStid,
+  searchId:
+    flight.searchId ||
+    newFlights[0]?.searchId ||
+    "",
+  stid:
+    (flight as any).stid ||
+    response.stid ||
+    searchStid,
 }));
 
-/*
- * Bonton should apply the stop filter server-side,
- * but we enforce it locally as well so the UI never
- * displays flights that do not match the selected filter.
- */
-const filteredProviderFlights = enrichedFlights.filter(
-  (flight: any) => {
-    const segments =
-      flight.segments ??
-      flight.disseg ??
-      flight.fltseg ??
-      [];
+setOriginalFlights((prev) => [
+  ...prev,
+  ...enrichedFlights,
+]);
 
-    const stopCount =
-      typeof flight.stops === "number"
-        ? flight.stops
-        : Math.max(segments.length - 1, 0);
-
-    if (nextNonStop && !nextOneStop) {
-      return stopCount === 0;
-    }
-
-    if (nextOneStop && !nextNonStop) {
-      return stopCount === 1;
-    }
-
-    if (nextNonStop && nextOneStop) {
-      return stopCount === 0 || stopCount === 1;
-    }
-
-    return true;
-  }
-);
-
-
-setFlightList(filteredProviderFlights);
+setFlightList((prev) => [
+  ...prev,
+  ...enrichedFlights,
+]);
 
 console.log(
   "========== FILTERED FLIGHTS RECEIVED ==========",
   {
     received: enrichedFlights.length,
-    afterStopFilter: filteredProviderFlights.length,
     nonStop: nextNonStop,
     oneStop: nextOneStop,
   }
@@ -1195,7 +1202,6 @@ console.log(
   "========== FILTERED FLIGHTS RECEIVED ==========",
   {
     received: enrichedFlights.length,
-    afterStopFilter: filteredProviderFlights.length,
     nonStop: nextNonStop,
     oneStop: nextOneStop,
   }
@@ -1217,13 +1223,13 @@ console.log(
 }
   },
   [
-    searchStid,
-    selectedAirlines,
-    filters.nonStop,
-    filters.oneStop,
-    priceLimit,
-    normalizedFlights,
-  ]
+  searchStid,
+  selectedAirlines,
+  filters.nonStop,
+  filters.oneStop,
+  priceLimit,
+  originalFlights,
+]
 );
 
 
@@ -1378,7 +1384,7 @@ console.log(
           </div>
 
           <button
-            onClick={() => {
+           onClick={() => {
   const resetFilters = {
     nonStop: false,
     oneStop: false,
@@ -1391,14 +1397,9 @@ console.log(
   setFilters(resetFilters);
   setSelectedAirlines([]);
   setPriceLimit(sliderMax);
-
-  applyProviderFilters({
-    nextSelectedAirlines: [],
-    nextNonStop: false,
-    nextOneStop: false,
-    nextPriceLimit: sliderMax,
-  });
+  setFlightList(originalFlights);
 }}
+
             className="text-cyan-400 hover:text-cyan-300 text-sm"
           >
             Clear
@@ -1470,7 +1471,7 @@ console.log(
               <input
                 type="checkbox"
                 checked={filters.nonStop}
-                onChange={() => {
+                 onChange={() => {
   const nextValue = !filters.nonStop;
 
   setFilters((prev) => ({
@@ -1492,24 +1493,22 @@ console.log(
             <label className="flex items-center gap-3 cursor-pointer text-white">
 
               <input
-                type="checkbox"
-                checked={filters.oneStop}
-                
-             onChange={() => {
-  const nextValue = !filters.oneStop;
+  type="checkbox"
+  checked={filters.oneStop}
+  onChange={() => {
+    const nextValue = !filters.oneStop;
 
-  setFilters((prev) => ({
-    ...prev,
-    oneStop: nextValue,
-  }));
+    setFilters((prev) => ({
+      ...prev,
+      oneStop: nextValue,
+    }));
 
-  applyProviderFilters({
-    nextNonStop: filters.nonStop,
-    nextOneStop: nextValue,
-  });
-}}
-              />
-
+    applyProviderFilters({
+      nextNonStop: filters.nonStop,
+      nextOneStop: nextValue,
+    });
+  }}
+/>
               1 Stop
 
             </label>
@@ -1756,6 +1755,93 @@ console.log(
                     </span>
                   )}
                 </div>
+
+
+
+{/* OUTBOUND ROUTE */}
+<div className="flex items-center gap-2 mt-2 text-sm flex-wrap">
+  <span className="font-semibold text-white">
+    {flight.from || "--"}
+  </span>
+
+  <span className="text-white/40">→</span>
+
+  <span className="font-semibold text-white">
+    {flight.to || "--"}
+  </span>
+
+  <span className="text-white/40">•</span>
+
+  <span
+    className={
+      flight.stops === "Non-stop"
+        ? "text-green-400 font-medium"
+        : "text-yellow-400 font-medium"
+    }
+  >
+    {flight.stops}
+  </span>
+
+  {flight.stops !== "Non-stop" && (
+    <>
+      <span className="text-white/40">•</span>
+
+      <span className="text-cyan-300 font-medium">
+        {flight.layoverLocation
+          ? `Layover in ${flight.layoverLocation}`
+          : flight.layoverAirport
+          ? `Layover at ${flight.layoverAirport}`
+          : "Layover"}
+      </span>
+
+      {(flight.layoverMinutes ?? 0) > 0 && (
+        <span className="text-white/50">
+         ({formatLayover(flight.layoverMinutes)})
+  </span>
+)}
+    </>
+  )}
+</div>
+
+{/* RETURN ROUTE */}
+{flight.tripType === "ROUND_TRIP" && flight.returnFlight && (
+  <div className="mt-2 flex items-center gap-2 text-sm flex-wrap">
+    <span className="text-purple-400 font-semibold">
+      RETURN
+    </span>
+
+    <span className="font-semibold text-white">
+      {flight.returnFlight.from || "--"}
+    </span>
+
+    <span className="text-white/40">→</span>
+
+    <span className="font-semibold text-white">
+      {flight.returnFlight.to || "--"}
+    </span>
+
+    <span className="text-white/40">•</span>
+
+    <span
+      className={
+        flight.returnFlight.stops === 0
+          ? "text-green-400 font-medium"
+          : "text-yellow-400 font-medium"
+      }
+    >
+      {flight.returnFlight.stops === 0
+        ? "Non-stop"
+        : `${flight.returnFlight.stops} ${
+            flight.returnFlight.stops === 1
+              ? "Stop"
+              : "Stops"
+          }`}
+    </span>
+  </div>
+)}
+
+
+
 
 {/* =========================================
     SEGMENT TIMELINE
@@ -2080,6 +2166,9 @@ console.log(
             </motion.div>
           ))}
                 </div>
+
+
+
 
         {/* LOAD MORE FLIGHTS */}
 
