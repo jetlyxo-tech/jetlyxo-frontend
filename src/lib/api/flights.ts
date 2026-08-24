@@ -40,9 +40,6 @@ async function fetchFlightApi<T>(
   return responseData;
 }
 
-/* =========================================================
-   SEARCH FLIGHTS
-========================================================= */
 async function fetchFlightSearchApi(
   endpoint: string,
   params: Record<string, string | number | undefined>
@@ -66,7 +63,7 @@ async function fetchFlightSearchApi(
     {
       method: "GET",
       headers: {
-        Accept: "application/json",
+        Accept: "application/x-ndjson",
         ...(token
           ? {
               Authorization: `Bearer ${token}`,
@@ -77,16 +74,163 @@ async function fetchFlightSearchApi(
     }
   );
 
-  const responseData = await response.json();
-
   if (!response.ok) {
+    let message = `Search failed (${response.status})`;
+
+    try {
+      const errorText = await response.text();
+
+      if (errorText) {
+        try {
+          const errorData = JSON.parse(errorText);
+
+          message =
+            errorData?.message ||
+            message;
+        } catch {
+          message = errorText;
+        }
+      }
+    } catch {
+      // Keep default error message.
+    }
+
+    throw new Error(message);
+  }
+
+  if (!response.body) {
     throw new Error(
-      responseData?.message ??
-        `Search failed (${response.status})`
+      "Search response stream is not available"
     );
   }
 
-  return responseData;
+  const reader = response.body.getReader();
+
+  const decoder = new TextDecoder();
+
+  let buffer = "";
+
+  const chunks: any[] = [];
+
+  while (true) {
+    const { done, value } =
+      await reader.read();
+
+    if (done) {
+      break;
+    }
+
+    buffer += decoder.decode(value, {
+      stream: true,
+    });
+
+    const lines = buffer.split(/\r?\n/);
+
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+
+      if (!trimmed) {
+        continue;
+      }
+
+      let chunk: any;
+
+      try {
+        chunk = JSON.parse(trimmed);
+      } catch (error) {
+        console.warn(
+          "[Flight Search] Failed to parse NDJSON chunk:",
+          trimmed.substring(0, 500)
+        );
+
+        continue;
+      }
+
+      if (chunk?.type === "error") {
+        throw new Error(
+          chunk.message ||
+            "Flight search failed"
+        );
+      }
+
+      chunks.push(chunk);
+    }
+  }
+
+  buffer += decoder.decode();
+
+  const finalLine = buffer.trim();
+
+  if (finalLine) {
+    try {
+      const chunk = JSON.parse(finalLine);
+
+      if (chunk?.type === "error") {
+        throw new Error(
+          chunk.message ||
+            "Flight search failed"
+        );
+      }
+
+      chunks.push(chunk);
+    } catch (error) {
+      console.warn(
+        "[Flight Search] Failed to parse final NDJSON chunk:",
+        finalLine.substring(0, 500)
+      );
+    }
+  }
+
+ 
+  const flightChunks = chunks.filter(
+    (chunk) =>
+      chunk?.type === "flight_chunk"
+  );
+
+  const completionChunk =
+    chunks.find(
+      (chunk) =>
+        chunk?.type === "search_complete"
+    ) || null;
+
+  const flights = flightChunks.flatMap(
+    (chunk) =>
+      Array.isArray(chunk?.data)
+        ? chunk.data
+        : []
+  );
+
+  return {
+    success: true,
+
+    provider:
+      completionChunk?.provider ||
+      flightChunks[0]?.provider ||
+      "BONTON",
+
+    searchId:
+      completionChunk?.searchId ||
+      flightChunks.find(
+        (chunk) => chunk?.searchId
+      )?.searchId ||
+      "",
+
+    stid:
+      completionChunk?.stid ||
+      flightChunks.find(
+        (chunk) => chunk?.stid
+      )?.stid ||
+      "",
+
+    count: flights.length,
+
+    data: flights,
+
+    complete:
+      completionChunk?.complete === true,
+  };
 }
 
 export async function searchFlights(
@@ -112,24 +256,18 @@ export async function searchFlights(
     );
 
     const flights: Flight[] =
-      response?.data ??
-      response?.flights ??
-      [];
+      response?.data ?? [];
 
     // Bonton search ID used by Fare Quote
     const searchId =
-      response?.searchId ??
-      response?.sId ??
-      "";
+      response?.searchId ?? "";
 
     // Bonton trace ID required by /flightapi/next
     const stid =
       response?.stid ??
       "";
 
-    const responseTId =
-      response?.tId ??
-      "";
+    const responseTId = "";
 
     return flights.map((flight: any) => ({
       ...flight,
