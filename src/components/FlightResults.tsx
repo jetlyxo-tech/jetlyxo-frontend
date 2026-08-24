@@ -1523,16 +1523,22 @@ console.log(
                 checked={filters.oneStop}
                 
               onChange={() => {
-  const nextValue = !filters.oneStop;
+  const nextValue = !filters.nonStop;
+
+  console.log("🔥 NON STOP CLICKED", {
+    nextValue,
+    currentNonStop: filters.nonStop,
+    currentOneStop: filters.oneStop,
+  });
 
   setFilters((prev) => ({
     ...prev,
-    oneStop: nextValue,
+    nonStop: nextValue,
   }));
 
   applyProviderFilters({
-    nextNonStop: filters.nonStop,
-    nextOneStop: nextValue,
+    nextNonStop: nextValue,
+    nextOneStop: filters.oneStop,
   });
 }}
               />
