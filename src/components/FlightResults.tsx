@@ -420,30 +420,41 @@ function normalizeFlight(
       ? flight.stops
       : Math.max(segments.length - 1, 0);
 
-  /* ---------------------------------------------
-     LAYOVER DATA
-  --------------------------------------------- */
+const layoverMinutes =
+  segments.length > 1
+    ? segments
+        .slice(0, -1)
+        .reduce(
+          (total: number, segment: FlightSegment, index: number) => {
+            const nextSegment = segments[index + 1];
 
-  const layoverMinutes =
-    segments.length > 1
-      ? segments
-          .slice(0, -1)
-          .reduce(
-            (total: number, segment: any) =>
+            return (
               total +
-              Number(segment.layoverMinutes ?? 0),
-            0
-          )
-      : 0;
+              getSegmentLayover(segment, nextSegment)
+            );
+          },
+          0
+        )
+    : 0;
 
-  const layoverSegment =
-    segments.find(
-      (segment: any) =>
-        Number(segment.layoverMinutes ?? 0) > 0
-    ) ??
-    (segments.length > 1
-      ? segments[1]
-      : undefined);
+const layoverSegment =
+  segments.find(
+    (segment: FlightSegment, index: number) => {
+      if (index >= segments.length - 1) {
+        return false;
+      }
+
+      return (
+        getSegmentLayover(
+          segment,
+          segments[index + 1]
+        ) > 0
+      );
+    }
+  ) ??
+  (segments.length > 1
+    ? segments[1]
+    : undefined);
 
   /* ---------------------------------------------
      RETURN FLIGHT
@@ -795,19 +806,19 @@ export default function FlightResults({
     (flights[0] as any)?.stid ?? ""
   );
 
-  const [nextSkip, setNextSkip] =
+const [nextSkip, setNextSkip] =
   useState(flights.length);
 
-  const [loadingMore, setLoadingMore] =
+const [loadingMore, setLoadingMore] =
   useState(false);
 
-  const [hasMoreFlights, setHasMoreFlights] =
+const [hasMoreFlights, setHasMoreFlights] =
   useState(true);
 
-  const nextRequestInProgress = useRef(false);
-  const priceInitialized = useRef(false);
+const nextRequestInProgress = useRef(false);
+const priceInitialized = useRef(false);
 
- useEffect(() => {
+useEffect(() => {
   priceInitialized.current = false;
 
   setFlightList(flights);
@@ -819,33 +830,6 @@ export default function FlightResults({
   setNextSkip(flights.length);
   setHasMoreFlights(true);
 }, [flights]);
-
- useEffect(() => {
-  if (!flightList.length) return;
-
-  const highest = Math.max(
-    ...flightList.map((f: any) => {
-      if (f.tripType === "ROUND_TRIP") {
-        return Number(
-          f.totalPrice ??
-          Number(f.price ?? 0) +
-            Number(f.returnFlight?.price ?? 0)
-        );
-      }
-
-      return Number(f.price ?? 0);
-    })
-  );
-
-  setSliderMax(highest);
-
-  // Initialize price only once for the original search results.
-  // Do NOT reset it after NEXT/filter responses.
-  if (!priceInitialized.current) {
-    setPriceLimit(highest);
-    priceInitialized.current = true;
-  }
-}, [flightList]);
 
 /* ---------------------------------------------
    BONTON NEXT FILTER BUILDER
@@ -898,6 +882,24 @@ const buildNextFilters = ({
         });
       }
     });
+
+console.log("========== AIRLINE FILTER DEBUG ==========");
+console.log("Selected airlines:", nextSelectedAirlines);
+console.log(
+  "Original airlines:",
+  originalFlights.map((flight, index) => {
+    const normalized = normalizeFlight(flight, index);
+
+    return {
+      airline: normalized.airline,
+      airlineCode: normalized.airlineCode,
+    };
+  })
+);
+console.log(
+  "Bonton airline payload:",
+  Array.from(airlineMap.values())
+);
 
     if (airlineMap.size > 0) {
       nextFilters.air = Array.from(airlineMap.values());
@@ -1097,14 +1099,17 @@ console.log(
     }, [flightList]);
 
   const airlines = useMemo(() => {
-    return Array.from(
-      new Set(
-        normalizedFlights.map(
-          (f) => f.airline
+  return Array.from(
+    new Set(
+      originalFlights
+        .map((flight, index) =>
+          normalizeFlight(flight, index)
         )
-      )
-    ).sort();
-  }, [normalizedFlights]);
+        .map((flight) => flight.airline)
+        .filter(Boolean)
+    )
+  ).sort();
+}, [originalFlights]);
 
 
 
@@ -1413,7 +1418,7 @@ const filteredFlights = useMemo(() => {
           </div>
 
           <button
-           onClick={() => {
+         onClick={() => {
   const resetFilters = {
     nonStop: false,
     oneStop: false,
@@ -1425,8 +1430,28 @@ const filteredFlights = useMemo(() => {
 
   setFilters(resetFilters);
   setSelectedAirlines([]);
-  setPriceLimit(sliderMax);
   setFlightList(originalFlights);
+  setNextSkip(originalFlights.length);
+  setHasMoreFlights(true);
+
+  priceInitialized.current = true;
+
+  const originalMax = Math.max(
+    ...originalFlights.map((f: any) => {
+      if (f.tripType === "ROUND_TRIP") {
+        return Number(
+          f.totalPrice ??
+          Number(f.price ?? 0) +
+            Number(f.returnFlight?.price ?? 0)
+        );
+      }
+
+      return Number(f.price ?? 0);
+    })
+  );
+
+  setSliderMax(originalMax);
+  setPriceLimit(originalMax);
 }}
 
             className="text-cyan-400 hover:text-cyan-300 text-sm"
@@ -2207,9 +2232,6 @@ const filteredFlights = useMemo(() => {
             </motion.div>
                    )))}
         </div>
-
-
-
 
         {/* LOAD MORE FLIGHTS */}
 
