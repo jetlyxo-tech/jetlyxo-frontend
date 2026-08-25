@@ -1123,20 +1123,20 @@ const applyProviderFilters = useCallback(
   } = {}) => {
     if (!searchStid) {
       toast.error("Flight search session is missing");
-       return;
-}
+      return;
+    }
 
     if (nextRequestInProgress.current) {
       console.log(
-       "Next request already in progress — skipping duplicate call"
-  );
-       return;
-}
+        "Filter request already in progress — skipping duplicate call"
+      );
+      return;
+    }
 
-nextRequestInProgress.current = true;
+    nextRequestInProgress.current = true;
 
-try {
-  setLoadingMore(true);
+    try {
+      setLoadingMore(true);
 
       const nextFilters = buildNextFilters({
         nextSelectedAirlines,
@@ -1165,47 +1165,93 @@ try {
       });
 
       const newFlights = response.flights ?? [];
-     
-const enrichedFlights = newFlights.map((flight) => ({
-  ...flight,
-  searchId:
-    flight.searchId ||
-    newFlights[0]?.searchId ||
-    "",
-  stid:
-    (flight as any).stid ||
-    response.stid ||
-    searchStid,
-}));
 
-setOriginalFlights((prev) => [
-  ...prev,
-  ...enrichedFlights,
-]);
+      console.log(
+        "========== BONTON FILTER RESPONSE =========="
+      );
+      console.log("Received flights:", newFlights.length);
+      console.log("Response stid:", response.stid);
 
-setFlightList((prev) => [
-  ...prev,
-  ...enrichedFlights,
-]);
+      /*
+       * IMPORTANT:
+       * Bonton has returned the NEW filtered dataset.
+       * Replace the currently displayed results.
+       *
+       * DO NOT append these flights to the previous list.
+       */
+      const enrichedFlights = newFlights.map((flight) => ({
+        ...flight,
 
-console.log(
-  "========== FILTERED FLIGHTS RECEIVED ==========",
-  {
-    received: enrichedFlights.length,
-    nonStop: nextNonStop,
-    oneStop: nextOneStop,
-  }
-);
-     
+        searchId:
+          flight.searchId ||
+          flightList[0]?.searchId ||
+          "",
 
-    console.log(
-  "========== FILTERED FLIGHTS RECEIVED ==========",
-  {
-    received: enrichedFlights.length,
-    nonStop: nextNonStop,
-    oneStop: nextOneStop,
-  }
-);
+        stid:
+          (flight as any).stid ||
+          response.stid ||
+          searchStid,
+      }));
+
+      /*
+       * Update the Bonton search session if the provider
+       * returned a new stid.
+       */
+      if (response.stid) {
+        setSearchStid(response.stid);
+      }
+
+      /*
+       * IMPORTANT:
+       * Replace the UI immediately.
+       *
+       * React will re-render because this is a new array.
+       * No page reload / router.refresh() is required.
+       */
+      setFlightList(enrichedFlights);
+
+      /*
+       * The original search result must remain untouched.
+       * It is used as the baseline for airline mapping
+       * and Clear Filters.
+       */
+
+      /*
+       * Filtering starts from skip 0, so the next "Load More"
+       * should continue after the filtered response.
+       */
+      setNextSkip(enrichedFlights.length);
+
+      /*
+       * If Bonton says the filtered search is complete,
+       * don't show Load More.
+       */
+      setHasMoreFlights(response.isComplete !== true);
+
+      /*
+       * If the provider returned no flights, keep the UI empty
+       * so the existing "No flights found" state is displayed.
+       */
+      if (!enrichedFlights.length) {
+        setHasMoreFlights(false);
+
+        console.log(
+          "Bonton returned 0 flights for the selected filters"
+        );
+
+        return;
+      }
+
+      console.log(
+        "========== FILTERED UI UPDATED =========="
+      );
+      console.log({
+        received: enrichedFlights.length,
+        nonStop: nextNonStop,
+        oneStop: nextOneStop,
+        airlines: nextSelectedAirlines,
+        priceLimit: nextPriceLimit,
+      });
     } catch (error) {
       console.error(
         "Apply Provider Filters Error:",
@@ -1218,94 +1264,85 @@ console.log(
           : "Unable to apply flight filters"
       );
     } finally {
-  setLoadingMore(false);
-  nextRequestInProgress.current = false;
-}
+      setLoadingMore(false);
+      nextRequestInProgress.current = false;
+    }
   },
   [
-  searchStid,
-  selectedAirlines,
-  filters.nonStop,
-  filters.oneStop,
-  priceLimit,
-  originalFlights,
-]
+    searchStid,
+    selectedAirlines,
+    filters.nonStop,
+    filters.oneStop,
+    priceLimit,
+    buildNextFilters,
+    flightList,
+  ]
 );
-
 
 
 /* ---------------------------------------------
    FILTERS
 --------------------------------------------- */
+const filteredFlights = useMemo(() => {
+  let list = [...normalizedFlights];
 
-  const filteredFlights =
-    useMemo(() => {
-      let list = [...normalizedFlights];
+  /*
+   * IMPORTANT:
+   *
+   * These filters are handled by Bonton:
+   * - Price
+   * - Stops
+   * - Airlines
+   *
+   * Therefore DO NOT apply them again here.
+   *
+   * The flightList already contains Bonton's filtered
+   * response.
+   */
 
-      
-     if (filters.nonStop || filters.oneStop) {
-       list = list.filter((f) => {
-         const isNonStop = f.stops === "Non-stop";
-         const isOneStop = f.stops === "1 Stop";
+  /*
+   * FRONTEND-ONLY DEPARTURE TIME FILTERS
+   *
+   * These are still applied locally because they are
+   * not currently included in the Bonton filter payload.
+   */
 
-         return (
-          (filters.nonStop && isNonStop) ||
-          (filters.oneStop && isOneStop)
-    );
-  });
-}
-      if (selectedAirlines.length) {
-        list = list.filter((f) =>
-          selectedAirlines.includes(
-            f.airline
-          )
-        );
-      }
+  if (filters.earlyMorning) {
+    list = list.filter((f) => {
+      const hr = Number(f.dep.split(":")[0]) || 0;
+      return hr < 6;
+    });
+  }
 
-      if (filters.earlyMorning) {
-        list = list.filter((f) => {
-          const hr =
-            Number(f.dep.split(":")[0]) || 0;
-          return hr < 6;
-        });
-      }
+  if (filters.morning) {
+    list = list.filter((f) => {
+      const hr = Number(f.dep.split(":")[0]) || 0;
+      return hr >= 6 && hr < 12;
+    });
+  }
 
-      if (filters.morning) {
-        list = list.filter((f) => {
-          const hr =
-            Number(f.dep.split(":")[0]) || 0;
-          return hr >= 6 && hr < 12;
-        });
-      }
+  if (filters.afternoon) {
+    list = list.filter((f) => {
+      const hr = Number(f.dep.split(":")[0]) || 0;
+      return hr >= 12 && hr < 18;
+    });
+  }
 
-      if (filters.afternoon) {
-        list = list.filter((f) => {
-          const hr =
-            Number(f.dep.split(":")[0]) || 0;
-          return hr >= 12 && hr < 18;
-        });
-      }
+  if (filters.evening) {
+    list = list.filter((f) => {
+      const hr = Number(f.dep.split(":")[0]) || 0;
+      return hr >= 18;
+    });
+  }
 
-      if (filters.evening) {
-        list = list.filter((f) => {
-          const hr =
-            Number(f.dep.split(":")[0]) || 0;
-          return hr >= 18;
-        });
-      }
-
-      list = list.filter(
-        (f) =>
-          f.priceNumber <= priceLimit
-      );
-
-      return list;
-    }, [
-      normalizedFlights,
-      filters,
-      selectedAirlines,
-      priceLimit,
-    ]);
+  return list;
+}, [
+  normalizedFlights,
+  filters.earlyMorning,
+  filters.morning,
+  filters.afternoon,
+  filters.evening,
+]);
 
 /* ---------------------------------------------
    SORTING
