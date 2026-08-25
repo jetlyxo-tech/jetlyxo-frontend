@@ -185,17 +185,23 @@ async function fetchFlightSearchApi(
 
  
   const flightChunks = chunks.filter(
+  (chunk) =>
+    chunk?.type === "flight_chunk"
+);
+
+const completionChunk =
+  chunks.find(
     (chunk) =>
-      chunk?.type === "flight_chunk"
-  );
+      chunk?.type === "search_complete"
+  ) || null;
 
-  const completionChunk =
-    chunks.find(
-      (chunk) =>
-        chunk?.type === "search_complete"
-    ) || null;
-
-  const flights = flightChunks.flatMap(
+/*
+ * BONTON NDJSON STREAMING
+ *
+ * Keep flight_chunk data exactly as received.
+ * We use it as the fallback streaming dataset.
+ */
+const streamedFlights = flightChunks.flatMap(
   (chunk) => {
     if (Array.isArray(chunk?.data)) {
       return chunk.data;
@@ -210,6 +216,34 @@ async function fetchFlightSearchApi(
     return [];
   }
 );
+
+
+let completedFlights: any[] = [];
+
+if (Array.isArray(completionChunk?.data)) {
+  completedFlights = completionChunk.data;
+} else if (
+  Array.isArray(completionChunk?.data?.flights)
+) {
+  completedFlights =
+    completionChunk.data.flights;
+}
+
+/*
+ * Final flight dataset:
+ *
+ * 1. Use normalized search_complete flights
+ *    when available.
+ *
+ * 2. Otherwise fall back to the NDJSON
+ *    flight_chunk flights.
+ *
+ * NDJSON streaming is NOT removed.
+ */
+const flights =
+  completedFlights.length > 0
+    ? completedFlights
+    : streamedFlights;
 
   return {
     success: true,
