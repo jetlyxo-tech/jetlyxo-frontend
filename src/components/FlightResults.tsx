@@ -28,6 +28,13 @@ const airlineLogos: Record<string, string> = {
   SpiceJet: "/airlines/spicejet.png",
 };
 
+const AIRLINE_CODE_FALLBACKS: Record<string, string> = {
+  IndiGo: "6E",
+  "Air India": "AI",
+  "Air India Express": "IX",
+  "Akasa Air": "QP",
+  SpiceJet: "SG",
+};
 /* ---------------------------------------------
    SORT OPTIONS
 --------------------------------------------- */
@@ -831,6 +838,35 @@ useEffect(() => {
   setHasMoreFlights(true);
 }, [flights]);
 
+useEffect(() => {
+  if (!originalFlights.length) {
+    setSliderMax(0);
+    setPriceLimit(0);
+    return;
+  }
+
+  const highest = Math.max(
+    ...originalFlights.map((f: any) => {
+      if (f.tripType === "ROUND_TRIP") {
+        return Number(
+          f.totalPrice ??
+            Number(f.price ?? 0) +
+            Number(f.returnFlight?.price ?? 0)
+        );
+      }
+
+      return Number(f.price ?? 0);
+    })
+  );
+
+  setSliderMax(highest);
+
+  if (!priceInitialized.current) {
+    setPriceLimit(highest);
+    priceInitialized.current = true;
+  }
+}, [originalFlights]);
+
 /* ---------------------------------------------
    BONTON NEXT FILTER BUILDER
 --------------------------------------------- */
@@ -859,52 +895,65 @@ const buildNextFilters = ({
     maxp: nextPriceLimit,
   };
 
-  // Airline
-  if (nextSelectedAirlines.length > 0) {
-    const airlineMap = new Map<
-      string,
-      {
-        airline_code: string;
-        airline_name: string;
-      }
-    >();
+// Airline
+if (nextSelectedAirlines.length > 0) {
+  const airlineMap = new Map<
+    string,
+    {
+      airline_code: string;
+      airline_name: string;
+    }
+  >();
 
-   originalFlights
-       .map((flight, index) => normalizeFlight(flight, index))
-       .forEach((flight) => {
-      if (
-        nextSelectedAirlines.includes(flight.airline) &&
-        flight.airlineCode
-      ) {
-        airlineMap.set(flight.airlineCode, {
-          airline_code: flight.airlineCode,
-          airline_name: flight.airline,
-        });
+  originalFlights
+    .map((flight, index) => normalizeFlight(flight, index))
+    .forEach((flight) => {
+      if (!nextSelectedAirlines.includes(flight.airline)) {
+        return;
       }
+
+      const airlineCode =
+        flight.airlineCode ||
+        AIRLINE_CODE_FALLBACKS[flight.airline];
+
+      if (!airlineCode) {
+        console.warn(
+          "No airline code found for:",
+          flight.airline
+        );
+        return;
+      }
+
+      airlineMap.set(airlineCode, {
+        airline_code: airlineCode,
+        airline_name: flight.airline,
+      });
     });
 
-console.log("========== AIRLINE FILTER DEBUG ==========");
-console.log("Selected airlines:", nextSelectedAirlines);
-console.log(
-  "Original airlines:",
-  originalFlights.map((flight, index) => {
-    const normalized = normalizeFlight(flight, index);
+  console.log("========== AIRLINE FILTER DEBUG ==========");
+  console.log("Selected airlines:", nextSelectedAirlines);
 
-    return {
-      airline: normalized.airline,
-      airlineCode: normalized.airlineCode,
-    };
-  })
-);
-console.log(
-  "Bonton airline payload:",
-  Array.from(airlineMap.values())
-);
+  console.log(
+    "Original airlines:",
+    originalFlights.map((flight, index) => {
+      const normalized = normalizeFlight(flight, index);
 
-    if (airlineMap.size > 0) {
-      nextFilters.air = Array.from(airlineMap.values());
-    }
+      return {
+        airline: normalized.airline,
+        airlineCode: normalized.airlineCode,
+      };
+    })
+  );
+
+  console.log(
+    "Bonton airline payload:",
+    Array.from(airlineMap.values())
+  );
+
+  if (airlineMap.size > 0) {
+    nextFilters.air = Array.from(airlineMap.values());
   }
+}
 
   // Stops
   if (nextNonStop || nextOneStop) {
