@@ -845,19 +845,19 @@ useEffect(() => {
     return;
   }
 
-  const highest = Math.max(
-    ...originalFlights.map((f: any) => {
-      if (f.tripType === "ROUND_TRIP") {
-        return Number(
-          f.totalPrice ??
-            Number(f.price ?? 0) +
-            Number(f.returnFlight?.price ?? 0)
-        );
-      }
-
-      return Number(f.price ?? 0);
-    })
+  const normalizedOriginalFlights = originalFlights.map(
+    (flight, index) => normalizeFlight(flight, index)
   );
+
+  const highest = Math.max(
+    ...normalizedOriginalFlights.map(
+      (flight) => Number(flight.priceNumber) || 0
+    )
+  );
+
+  console.log("========== PRICE RANGE ==========");
+  console.log("Original flights:", originalFlights.length);
+  console.log("Calculated max price:", highest);
 
   setSliderMax(highest);
 
