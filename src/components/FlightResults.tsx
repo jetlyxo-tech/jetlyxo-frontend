@@ -301,8 +301,28 @@ function normalizeFlight(
   flight: Flight,
   index: number
 ): NormalizedFlight {
-  const rawFlight = flight as any;
-  const price = Number(rawFlight.price ?? 0);
+const rawFlight = flight as any;
+
+const getValidNumber = (...values: unknown[]): number => {
+  for (const value of values) {
+    const n = Number(value);
+
+    if (Number.isFinite(n) && n > 0) {
+      return n;
+    }
+  }
+
+  return 0;
+};
+
+const price = getValidNumber(
+  rawFlight.price,
+  rawFlight.totalPrice,
+  rawFlight.fare,
+  rawFlight.amount,
+  rawFlight.totalFare,
+  rawFlight.netFare
+);
 
 console.log("========== RAW PRICE DEBUG ==========");
 console.log({
@@ -422,14 +442,21 @@ console.log({
      TOTAL PRICE
   --------------------------------------------- */
 
-  const totalPrice =
-    rawFlight.tripType === "ROUND_TRIP"
-      ? Number(
-          rawFlight.totalPrice ??
-          price +
-            Number(rawFlight.returnFlight?.price ?? 0)
-        )
-      : price;
+  const returnPrice = getValidNumber(
+  rawFlight.returnFlight?.price,
+  rawFlight.returnFlight?.totalPrice,
+  rawFlight.returnFlight?.fare,
+  rawFlight.returnFlight?.amount,
+  rawFlight.returnFlight?.totalFare
+);
+
+const totalPrice =
+  rawFlight.tripType === "ROUND_TRIP"
+    ? getValidNumber(
+        rawFlight.totalPrice,
+        price + returnPrice
+      )
+    : price;
 
   /* ---------------------------------------------
      STOPS
@@ -646,8 +673,8 @@ const layoverSegment =
       totalPrice,
 
     priceDisplay:
-      price > 0
-        ? `₹${price.toLocaleString("en-IN")}`
+      totalPrice > 0
+        ? `₹${totalPrice.toLocaleString("en-IN")}`
         : "—",
 
     duration:
@@ -1206,6 +1233,12 @@ const applyProviderFilters = useCallback(
     try {
       setLoadingMore(true);
 
+      /*
+       * =========================================================
+       * BUILD BONTON FILTERS
+       * =========================================================
+       */
+
       const nextFilters = buildNextFilters({
         nextSelectedAirlines,
         nextNonStop,
@@ -1214,6 +1247,7 @@ const applyProviderFilters = useCallback(
       });
 
       console.log("========== APPLY BONTON FILTERS ==========");
+
       console.log({
         stid: searchStid,
         filters: nextFilters,
@@ -1222,6 +1256,12 @@ const applyProviderFilters = useCallback(
         isdom: true,
         isret: false,
       });
+
+      /*
+       * =========================================================
+       * CALL BONTON
+       * =========================================================
+       */
 
       const response = await nextFlights({
         stid: searchStid,
@@ -1234,25 +1274,25 @@ const applyProviderFilters = useCallback(
 
       const newFlights = response.flights ?? [];
 
-      console.log(
-        "========== BONTON FILTER RESPONSE =========="
-      );
+      console.log("========== BONTON FILTER RESPONSE ==========");
       console.log("Received flights:", newFlights.length);
       console.log("Response stid:", response.stid);
 
       /*
-       * IMPORTANT:
-       * Bonton has returned the NEW filtered dataset.
-       * Replace the currently displayed results.
+       * =========================================================
+       * ENRICH RESPONSE
+       * =========================================================
        *
-       * DO NOT append these flights to the previous list.
+       * Preserve searchId and stid so booking continues to work.
        */
+
       const enrichedFlights = newFlights.map((flight) => ({
         ...flight,
 
         searchId:
           flight.searchId ||
           flightList[0]?.searchId ||
+          originalFlights[0]?.searchId ||
           "",
 
         stid:
@@ -1262,59 +1302,256 @@ const applyProviderFilters = useCallback(
       }));
 
       /*
-       * Update the Bonton search session if the provider
-       * returned a new stid.
+       * =========================================================
+       * UPDATE SEARCH SESSION
+       * =========================================================
        */
+
       if (response.stid) {
         setSearchStid(response.stid);
       }
 
       /*
-       * IMPORTANT:
-       * Replace the UI immediately.
+       * =========================================================
+       * FRONTEND SAFETY FILTER
+       * =========================================================
        *
-       * React will re-render because this is a new array.
-       * No page reload / router.refresh() is required.
+       * Bonton is supposed to filter these, but we DO NOT blindly
+       * trust the provider response.
+       *
+       * This guarantees that the UI cannot show:
+       *
+       * - wrong airline
+       * - wrong price
+       * - wrong stop count
+       *
+       * even if Bonton returns extra flights.
        */
-      setFlightList(enrichedFlights);
+
+      const locallyFilteredFlights = enrichedFlights.filter(
+        (flight, index) => {
+          const normalized = normalizeFlight(flight, index);
+
+          /*
+           * -----------------------------------------------------
+           * AIRLINE
+           * -----------------------------------------------------
+           */
+
+         if (nextSelectedAirlines.length > 0) {
+  const selectedAirlineCodes = new Set(
+    originalFlights
+      .map((flight, originalIndex) =>
+        normalizeFlight(flight, originalIndex)
+      )
+      .filter((flight) =>
+        nextSelectedAirlines.includes(flight.airline)
+      )
+      .map(
+        (flight) =>
+          flight.airlineCode ||
+          AIRLINE_CODE_FALLBACKS[flight.airline]
+      )
+      .filter(Boolean)
+  );
+
+  const currentAirlineCode =
+    normalized.airlineCode ||
+    AIRLINE_CODE_FALLBACKS[normalized.airline];
+
+  if (
+    !currentAirlineCode ||
+    !selectedAirlineCodes.has(currentAirlineCode)
+  ) {
+    return false;
+  }
+}
+
+          /*
+           * -----------------------------------------------------
+           * PRICE
+           * -----------------------------------------------------
+           *
+           * nextPriceLimit === 0 means the price filter is not
+           * active.
+           *
+           * Otherwise the normalized total price must be <= limit.
+           */
+
+          if (nextPriceLimit > 0) {
+            const flightPrice =
+              Number(normalized.priceNumber) || 0;
+
+            if (
+              flightPrice <= 0 ||
+              flightPrice > nextPriceLimit
+            ) {
+              return false;
+            }
+          }
+
+          /*
+           * -----------------------------------------------------
+           * STOPS
+           * -----------------------------------------------------
+           */
+
+          const stopCount =
+            normalized.stops === "Non-stop"
+              ? 0
+              : Number(
+                  normalized.stops.match(/\d+/)?.[0] ?? 0
+                );
+
+          /*
+           * Non-stop only
+           */
+
+          if (nextNonStop && !nextOneStop) {
+            if (stopCount !== 0) {
+              return false;
+            }
+          }
+
+          /*
+           * 1-stop only
+           */
+
+          if (nextOneStop && !nextNonStop) {
+            if (stopCount !== 1) {
+              return false;
+            }
+          }
+
+          /*
+           * Both selected
+           */
+
+          if (nextNonStop && nextOneStop) {
+            if (stopCount !== 0 && stopCount !== 1) {
+              return false;
+            }
+          }
+
+          return true;
+        }
+      );
 
       /*
-       * The original search result must remain untouched.
-       * It is used as the baseline for airline mapping
-       * and Clear Filters.
+       * =========================================================
+       * FILTER DEBUG
+       * =========================================================
        */
 
+      console.log("========== FRONTEND FILTER SAFETY ==========");
+
+      console.log({
+        providerReceived: enrichedFlights.length,
+        frontendDisplayed: locallyFilteredFlights.length,
+
+        selectedAirlines: nextSelectedAirlines,
+
+        nonStop: nextNonStop,
+        oneStop: nextOneStop,
+
+        priceLimit: nextPriceLimit,
+
+        displayedAirlines: locallyFilteredFlights.map(
+          (flight, index) =>
+            normalizeFlight(flight, index).airline
+        ),
+
+        displayedPrices: locallyFilteredFlights.map(
+          (flight, index) =>
+            normalizeFlight(flight, index).priceNumber
+        ),
+
+        displayedStops: locallyFilteredFlights.map(
+          (flight, index) =>
+            normalizeFlight(flight, index).stops
+        ),
+      });
+
       /*
-       * Filtering starts from skip 0, so the next "Load More"
-       * should continue after the filtered response.
+       * =========================================================
+       * UPDATE UI
+       * =========================================================
+       *
+       * IMPORTANT:
+       * Use the locally filtered result for the UI.
        */
+
+      setFlightList(locallyFilteredFlights);
+
+      /*
+       * =========================================================
+       * PAGINATION
+       * =========================================================
+       *
+       * IMPORTANT:
+       * nextSkip MUST use the provider response count,
+       * NOT locallyFilteredFlights.length.
+       *
+       * Example:
+       *
+       * Bonton returns 20
+       * Airline filter leaves 3
+       *
+       * Next request must start at skip=20, not skip=3.
+       */
+
       setNextSkip(enrichedFlights.length);
 
       /*
-       * If Bonton says the filtered search is complete,
-       * don't show Load More.
+       * =========================================================
+       * PROVIDER PAGINATION STATE
+       * =========================================================
        */
+
       setHasMoreFlights(response.isComplete !== true);
 
       /*
-       * If the provider returned no flights, keep the UI empty
-       * so the existing "No flights found" state is displayed.
+       * =========================================================
+       * EMPTY RESULT
+       * =========================================================
        */
-      if (!enrichedFlights.length) {
-        setHasMoreFlights(false);
 
+      if (!locallyFilteredFlights.length) {
         console.log(
-          "Bonton returned 0 flights for the selected filters"
+          "========== NO FLIGHTS AFTER FRONTEND SAFETY FILTER =========="
         );
+
+        console.log({
+          providerReceived: enrichedFlights.length,
+          selectedAirlines: nextSelectedAirlines,
+          nonStop: nextNonStop,
+          oneStop: nextOneStop,
+          priceLimit: nextPriceLimit,
+        });
+
+        /*
+         * Do NOT overwrite the results with the old list.
+         *
+         * The UI should correctly show:
+         * "No flights found"
+         */
 
         return;
       }
 
+      /*
+       * =========================================================
+       * FINAL DEBUG
+       * =========================================================
+       */
+
       console.log(
         "========== FILTERED UI UPDATED =========="
       );
+
       console.log({
         received: enrichedFlights.length,
+        displayed: locallyFilteredFlights.length,
         nonStop: nextNonStop,
         oneStop: nextOneStop,
         airlines: nextSelectedAirlines,
@@ -1344,9 +1581,9 @@ const applyProviderFilters = useCallback(
     priceLimit,
     buildNextFilters,
     flightList,
+    originalFlights,
   ]
 );
-
 
 /* ---------------------------------------------
    FILTERS
@@ -1499,22 +1736,14 @@ const filteredFlights = useMemo(() => {
 
   priceInitialized.current = true;
 
-  const originalMax = Math.max(
-    ...originalFlights.map((f: any) => {
-      if (f.tripType === "ROUND_TRIP") {
-        return Number(
-          f.totalPrice ??
-          Number(f.price ?? 0) +
-            Number(f.returnFlight?.price ?? 0)
-        );
-      }
+ const originalMax = Math.max(
+  ...originalFlights.map((flight, index) =>
+    normalizeFlight(flight, index).priceNumber
+  )
+);
 
-      return Number(f.price ?? 0);
-    })
-  );
-
-  setSliderMax(originalMax);
-  setPriceLimit(originalMax);
+setSliderMax(originalMax);
+setPriceLimit(originalMax);
 }}
 
             className="text-cyan-400 hover:text-cyan-300 text-sm"
