@@ -302,8 +302,21 @@ function normalizeFlight(
   index: number
 ): NormalizedFlight {
   const rawFlight = flight as any;
+  const price = Number(rawFlight.price ?? 0);
 
-  const price = Number(flight.price ?? 0);
+console.log("========== RAW PRICE DEBUG ==========");
+console.log({
+  id: rawFlight.id,
+  price: rawFlight.price,
+  totalPrice: rawFlight.totalPrice,
+  priceDisplay: rawFlight.priceDisplay,
+  fare: rawFlight.fare,
+  amount: rawFlight.amount,
+  totalFare: rawFlight.totalFare,
+  baseFare: rawFlight.baseFare,
+  netFare: rawFlight.netFare,
+  rawFlight,
+});
 
   /* ---------------------------------------------
      SEGMENTS
@@ -882,20 +895,21 @@ const buildNextFilters = ({
   nextOneStop?: boolean;
   nextPriceLimit?: number;
 } = {}) => {
-  const nextFilters: {
-    minp?: number;
-    maxp?: number;
-    air?: {
-      airline_code: string;
-      airline_name: string;
-    }[];
-    stp?: number[];
-  } = {
-    minp: 0,
-    maxp: nextPriceLimit,
-  };
+ const nextFilters: {
+  minp?: number;
+  maxp?: number;
+  air?: {
+    airline_code: string;
+    airline_name: string;
+  }[];
+  stp?: number[];
+} = {};
 
-// Airline
+/* PRICE FILTER */
+if (nextPriceLimit > 0) {
+  nextFilters.minp = 0;
+  nextFilters.maxp = nextPriceLimit;
+}
 if (nextSelectedAirlines.length > 0) {
   const airlineMap = new Map<
     string,
