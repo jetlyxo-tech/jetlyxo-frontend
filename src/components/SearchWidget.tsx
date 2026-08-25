@@ -1614,6 +1614,7 @@ font-semibold text-white">
                       Secure Payments
                     </h3>
 
+
                     <p className="mt-0.5 text-xs text-slate-500">
                       Safe & encrypted transactions.
                     </p>
