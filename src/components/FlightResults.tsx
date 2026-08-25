@@ -1388,14 +1388,6 @@ const filteredFlights = useMemo(() => {
 
       return list;
     }, [filteredFlights, sortBy]);
-
-  if (!sortedFlights.length) {
-    return (
-      <div className="glass-card p-10 text-center text-white">
-        No flights found.
-      </div>
-    );
-  }
   return (
     <div
       id="results"
@@ -1694,8 +1686,20 @@ const filteredFlights = useMemo(() => {
 
         </div>
 
-                <div className="space-y-4">
-          {sortedFlights.map((flight, i) => (
+         <div className="space-y-4">
+  {sortedFlights.length === 0 ? (
+    <div className="glass-card p-10 text-center text-white">
+      <h3 className="text-lg font-semibold">
+        No flights found
+      </h3>
+
+      <p className="mt-2 text-sm text-white/60">
+        No flights are available for the selected filters.
+        Try increasing the price range or changing your filters.
+      </p>
+    </div>
+  ) : (
+        sortedFlights.map((flight, i) => (
             <motion.div
               key={flight.id}
               className="
@@ -2201,8 +2205,8 @@ const filteredFlights = useMemo(() => {
 />
               </div>
             </motion.div>
-          ))}
-                </div>
+                   )))}
+        </div>
 
 
 
