@@ -1375,7 +1375,7 @@ console.log(
       );
 
       
-     const enrichedFlights = newFlights.map((flight) => ({
+const enrichedFlights = newFlights.map((flight: any) => ({
   ...flight,
 
   searchId:
@@ -1384,53 +1384,62 @@ console.log(
     "",
 
   stid:
-    (flight as any).stid ||
+    flight.stid ||
     response.stid ||
     searchStid,
+
+  /*
+   * Preserve round-trip information exactly as returned
+   * by Bonton.
+   */
+  tripType:
+    flight.tripType ||
+    (isRoundTrip ? "ROUND_TRIP" : "ONEWAY"),
+
+  returnFlight:
+    flight.returnFlight ?? null,
 }));
 
-
-if (response.stid) {
-  setSearchStid(response.stid);
-}
 console.log(
-  "========== FILTERED RAW FLIGHTS BEFORE UI =========="
+  "========== ENRICHED FILTERED FLIGHTS =========="
 );
 
 console.log(
   enrichedFlights.slice(0, 5).map((f: any) => ({
     id: f.id,
     tripType: f.tripType,
-    stid: f.stid,
-
-    from: f.from,
-    to: f.to,
-
     price: f.price,
     totalPrice: f.totalPrice,
+
+    onward: {
+      from: f.from,
+      to: f.to,
+    },
 
     returnFlight: f.returnFlight
       ? {
           id: f.returnFlight.id,
           from: f.returnFlight.from,
           to: f.returnFlight.to,
-          price: f.returnFlight.price,
           stops: f.returnFlight.stops,
-          segments: f.returnFlight.segments,
+          price: f.returnFlight.price,
+          segments:
+            f.returnFlight.segments ??
+            f.returnFlight.disseg ??
+            f.returnFlight.fltseg,
         }
       : null,
-
-    disseg: f.disseg,
-    fltseg: f.fltseg,
-    segments: f.segments,
   }))
 );
+
+if (response.stid) {
+  setSearchStid(response.stid);
+}
 
 setFlightList(enrichedFlights);
 setProviderFiltered(true);
 
 setNextSkip(enrichedFlights.length);
-
 
 setHasMoreFlights(
   response.isComplete !== true
