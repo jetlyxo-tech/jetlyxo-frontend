@@ -1143,10 +1143,10 @@ try {
       isret: isRoundTrip,
     });
 
- const response = await nextFlights({
-  stid: originalSearchStid,
+const response = await nextFlights({
+  stid: originalSearchStidRef.current,
   filters: nextFilters,
-  skip: 0,
+  skip: nextSkip,
   take: 20,
   isdom: true,
   isret: isRoundTrip,
@@ -1423,30 +1423,40 @@ console.log(
       );
 
       
-const enrichedFlights = newFlights.map((flight: any) => ({
-  ...flight,
+const enrichedFlights = newFlights.map((flight: any) => {
+ 
 
-  searchId:
-    flight.searchId ||
-    flightList[0]?.searchId ||
-    "",
+  const hasReturnFlight =
+    Boolean(flight.returnFlight);
 
-  stid:
-    flight.stid ||
-    response.stid ||
-    searchStid,
-
-  /*
-   * Preserve round-trip information exactly as returned
-   * by Bonton.
-   */
-  tripType:
+  const resolvedTripType =
     flight.tripType ||
-    (isRoundTrip ? "ROUND_TRIP" : "ONEWAY"),
+    (hasReturnFlight
+      ? "ROUND_TRIP"
+      : "ONEWAY");
 
-  returnFlight:
-    flight.returnFlight ?? null,
-}));
+  return {
+    ...flight,
+
+    searchId:
+      flight.searchId ||
+      flightList[0]?.searchId ||
+      originalFlights[0]?.searchId ||
+      "",
+
+    stid:
+      flight.stid ||
+      response.stid ||
+      searchStid,
+
+    tripType: resolvedTripType,
+
+    returnFlight:
+      hasReturnFlight
+        ? flight.returnFlight
+        : undefined,
+  };
+});
 
 console.log(
   "========== ENRICHED FILTERED FLIGHTS =========="
