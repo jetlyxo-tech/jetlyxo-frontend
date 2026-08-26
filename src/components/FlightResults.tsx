@@ -1321,6 +1321,38 @@ const applyProviderFilters = useCallback(
 
       const newFlights =
         response.flights ?? [];
+      console.log(
+  "========== RAW BONTON FILTERED FLIGHTS =========="
+);
+
+console.log(
+  newFlights.slice(0, 3).map((f: any) => ({
+    id: f.id,
+
+    tripType: f.tripType,
+
+    org: f.org,
+    des: f.des,
+
+    price: f.price,
+    totalPrice: f.totalPrice,
+
+    returnFlight: f.returnFlight
+      ? {
+          id: f.returnFlight.id,
+          org: f.returnFlight.org,
+          des: f.returnFlight.des,
+          from: f.returnFlight.from,
+          to: f.returnFlight.to,
+          stops: f.returnFlight.stops,
+          segments:
+            f.returnFlight.segments ??
+            f.returnFlight.disseg ??
+            f.returnFlight.fltseg,
+        }
+      : null,
+  }))
+);
 
       console.log(
         "========== BONTON FILTER RESPONSE =========="
