@@ -1179,51 +1179,57 @@ try {
 ]);
 
  
-
 /* ---------------------------------------------
    NORMALIZED DATA
 --------------------------------------------- */
+
 console.log(
   "========== FRONTEND ROUND TRIP DETAILS ==========",
-  flightList
-    .filter((f: any) => f.tripType === "ROUND_TRIP")
-    .slice(0, 3)
-    .map((f: any) => ({
-      id: f.id,
-      tripType: f.tripType,
+  flightList.slice(0, 5).map((f: any) => ({
+    id: f.id,
 
-      onward: {
-        from: f.from,
-        to: f.to,
-        departure: f.departure,
-        price: f.price,
-      },
+    tripType: f.tripType,
 
-      returnFlight: f.returnFlight
-        ? {
-            id: f.returnFlight.id,
-            from: f.returnFlight.from,
-            to: f.returnFlight.to,
-            departure: f.returnFlight.departure,
-            arrival: f.returnFlight.arrival,
-            duration: f.returnFlight.duration,
-            stops: f.returnFlight.stops,
-            segments: f.returnFlight.segments,
-            price: f.returnFlight.price,
-            tId: f.returnFlight.tId,
+    from: f.from,
+    to: f.to,
+
+    departure: f.departure,
+    arrival: f.arrival,
+
+    price: f.price,
+    totalPrice: f.totalPrice,
+
+    returnFlight: f.returnFlight
+      ? {
+          id: f.returnFlight.id,
+
+          from: f.returnFlight.from,
+          to: f.returnFlight.to,
+
+          departure: f.returnFlight.departure,
+          arrival: f.returnFlight.arrival,
+
+          duration: f.returnFlight.duration,
+
+          stops: f.returnFlight.stops,
+
+          segments: f.returnFlight.segments,
+
+          price: f.returnFlight.price,
+
+          tId: f.returnFlight.tId,
         }
-        : null,
-
-      totalPrice: f.totalPrice,
-    }))
+      : null,
+  }))
 );
-  const normalizedFlights =
-    useMemo(() => {
-      return flightList.map((flight, index) =>
-        normalizeFlight(flight, index)
-      );
-    }, [flightList]);
 
+const normalizedFlights = useMemo(() => {
+  return flightList.map((flight, index) =>
+    normalizeFlight(flight, index)
+  );
+}, [flightList]);
+
+ 
   const airlines = useMemo(() => {
   return Array.from(
     new Set(
@@ -1387,7 +1393,38 @@ console.log(
 if (response.stid) {
   setSearchStid(response.stid);
 }
+console.log(
+  "========== FILTERED RAW FLIGHTS BEFORE UI =========="
+);
 
+console.log(
+  enrichedFlights.slice(0, 5).map((f: any) => ({
+    id: f.id,
+    tripType: f.tripType,
+    stid: f.stid,
+
+    from: f.from,
+    to: f.to,
+
+    price: f.price,
+    totalPrice: f.totalPrice,
+
+    returnFlight: f.returnFlight
+      ? {
+          id: f.returnFlight.id,
+          from: f.returnFlight.from,
+          to: f.returnFlight.to,
+          price: f.returnFlight.price,
+          stops: f.returnFlight.stops,
+          segments: f.returnFlight.segments,
+        }
+      : null,
+
+    disseg: f.disseg,
+    fltseg: f.fltseg,
+    segments: f.segments,
+  }))
+);
 
 setFlightList(enrichedFlights);
 setProviderFiltered(true);
