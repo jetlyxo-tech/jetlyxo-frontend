@@ -1380,41 +1380,34 @@ const applyProviderFilters = useCallback(
         isret: isRoundTrip,
       });
 
-      const newFlights =
-        response.flights ?? [];
-      console.log(
-  "========== RAW BONTON FILTERED FLIGHTS =========="
+const newFlights =
+  response.flights ?? [];
+
+console.log(
+  "========== FULL FILTER RESPONSE DEBUG =========="
+);
+
+console.dir(response, {
+  depth: null,
+});
+
+console.log(
+  "========== FIRST FILTERED FLIGHT FULL DEBUG =========="
+);
+
+console.dir(newFlights[0], {
+  depth: null,
+});
+
+console.log(
+  "========== FIRST FILTERED FLIGHT KEYS =========="
 );
 
 console.log(
-  newFlights.slice(0, 3).map((f: any) => ({
-    id: f.id,
-
-    tripType: f.tripType,
-
-    org: f.org,
-    des: f.des,
-
-    price: f.price,
-    totalPrice: f.totalPrice,
-
-    returnFlight: f.returnFlight
-      ? {
-          id: f.returnFlight.id,
-          org: f.returnFlight.org,
-          des: f.returnFlight.des,
-          from: f.returnFlight.from,
-          to: f.returnFlight.to,
-          stops: f.returnFlight.stops,
-          segments:
-            f.returnFlight.segments ??
-            f.returnFlight.disseg ??
-            f.returnFlight.fltseg,
-        }
-      : null,
-  }))
+  newFlights[0]
+    ? Object.keys(newFlights[0])
+    : "NO FLIGHT"
 );
-
       console.log(
         "========== BONTON FILTER RESPONSE =========="
       );

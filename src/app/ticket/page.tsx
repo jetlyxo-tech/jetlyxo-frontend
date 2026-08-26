@@ -165,197 +165,306 @@ function TicketPageContent() {
   }, [bookingId, router]);
 
 
-  /* =======================================================
-     NORMALIZE BONTON FLIGHT DATA
-  ======================================================= */
 
-  const ticketData = useMemo(() => {
-    if (!booking) {
-      return null;
-    }
+const ticketData = useMemo(() => {
+  if (!booking) {
+    return null;
+  }
 
-    /*
-     * Bonton may return:
-     *
-     * flightData: [...]
-     *
-     * or
-     *
-     * flightData: {...}
-     */
+  /*
+   * =========================================================
+   * NORMALIZE FLIGHT DATA
+   *
+   * Bonton can return:
+   *
+   * 1. flightData: {...}
+   *
+   * OR
+   *
+   * 2. flightData: [{...}, {...}]
+   *
+   * For round trips, we MUST preserve every flightData object.
+   * Each object can contain multiple segments because of
+   * layovers.
+   * =========================================================
+   */
 
-    const flightData = Array.isArray(
-      booking.flightData
-    )
-      ? booking.flightData[0]
-      : booking.flightData;
+  const flightJourneys = Array.isArray(booking.flightData)
+    ? booking.flightData.filter(Boolean)
+    : booking.flightData
+      ? [booking.flightData]
+      : [];
 
-    /*
-     * Actual Bonton flight segment.
-     */
+  /*
+   * Build a normalized journey for every flightData object.
+   */
 
-    const segment =
-      flightData?.segs?.[0] ?? null;
+  const journeys = flightJourneys
+    .map((flightData: any, journeyIndex: number) => {
+      const segments = Array.isArray(flightData?.segs)
+        ? flightData.segs.filter(Boolean)
+        : [];
 
+      /*
+       * If Bonton does not provide segs, create a fallback
+       * segment from the flightData itself.
+       */
 
-    /* =====================================================
-       ROUTE
-    ===================================================== */
+      const normalizedSegments =
+        segments.length > 0
+          ? segments
+          : [
+              {
+                orgcty:
+                  flightData?.orgcty ||
+                  booking.flight?.from ||
+                  "—",
 
-    const fromCity =
-      segment?.orgcty ||
-      flightData?.orgcty ||
-      booking.flight?.from ||
-      "—";
+                dstcty:
+                  flightData?.dstcty ||
+                  booking.flight?.to ||
+                  "—",
 
-    const toCity =
-      segment?.dstcty ||
-      flightData?.dstcty ||
-      booking.flight?.to ||
-      "—";
+                orgapc:
+                  flightData?.orgapc ||
+                  "—",
 
-    const fromCode =
-      segment?.orgapc ||
-      flightData?.orgapc ||
-      "—";
+                dstapc:
+                  flightData?.dstapc ||
+                  "—",
 
-    const toCode =
-      segment?.dstapc ||
-      flightData?.dstapc ||
-      "—";
+                airnm:
+                  flightData?.airnm ||
+                  "—",
 
+                aircd:
+                  flightData?.aircd,
 
-    /* =====================================================
-       AIRLINE
-    ===================================================== */
+                fltno:
+                  flightData?.fltno,
 
-    const airline =
-      segment?.airnm ||
-      "—";
+                dptm:
+                  flightData?.dptm,
 
-    const flightNumber =
-      segment?.aircd && segment?.fltno
-        ? `${segment.aircd}-${segment.fltno}`
-        : segment?.fltno ||
-          "—";
+                artm:
+                  flightData?.artm,
 
+                cbcls:
+                  flightData?.cbcls,
+              },
+            ];
 
-    /* =====================================================
-       DEPARTURE / ARRIVAL
-    ===================================================== */
+      const firstSegment =
+        normalizedSegments[0] ?? null;
 
-    const departure =
-      segment?.dptm ||
-      flightData?.dptm ||
-      null;
+      const lastSegment =
+        normalizedSegments[
+          normalizedSegments.length - 1
+        ] ?? null;
 
-    const arrival =
-      segment?.artm ||
-      flightData?.artm ||
-      null;
+      const fromCity =
+        firstSegment?.orgcty ||
+        flightData?.orgcty ||
+        booking.flight?.from ||
+        "—";
 
+      const toCity =
+        lastSegment?.dstcty ||
+        flightData?.dstcty ||
+        booking.flight?.to ||
+        "—";
 
-    /* =====================================================
-       SEAT
-    ===================================================== */
+      const fromCode =
+        firstSegment?.orgapc ||
+        flightData?.orgapc ||
+        "—";
+
+      const toCode =
+        lastSegment?.dstapc ||
+        flightData?.dstapc ||
+        "—";
+
+      const airline =
+        firstSegment?.airnm ||
+        flightData?.airnm ||
+        "—";
+
+      const flightNumber =
+        firstSegment?.aircd &&
+        firstSegment?.fltno
+          ? `${firstSegment.aircd}-${firstSegment.fltno}`
+          : firstSegment?.fltno ||
+            flightData?.fltno ||
+            "—";
+
+      const departure =
+        firstSegment?.dptm ||
+        flightData?.dptm ||
+        null;
+
+      const arrival =
+        lastSegment?.artm ||
+        flightData?.artm ||
+        null;
+
+      const cabin =
+        firstSegment?.cbcls ||
+        flightData?.cbcls ||
+        "Economy";
+
+      return {
+        journeyIndex,
+        flightData,
+
+        segments: normalizedSegments,
+
+        firstSegment,
+        lastSegment,
+
+        fromCity,
+        toCity,
+
+        fromCode,
+        toCode,
+
+        airline,
+        flightNumber,
+
+        departure,
+        arrival,
+
+        cabin,
+      };
+    })
+    .filter(Boolean);
+
+  /*
+   * =========================================================
+   * PRIMARY FLIGHT
+   *
+   * Used for passenger / PNR / common booking information.
+   * =========================================================
+   */
+
+  const primaryJourney =
+    journeys[0] ?? null;
+
+  const primaryFlightData =
+    primaryJourney?.flightData ?? null;
+
+  /*
+   * SEAT
+   */
 
   const seat =
-    flightData?.mbg?.find(
+    primaryFlightData?.mbg?.find(
       (item: any) =>
         item?.ssr_type === "SeatDynamic"
-  )?.ssr_info ||
-  "Not Selected";
+    )?.ssr_info ||
+    "Not Selected";
 
+  /*
+   * MEAL
+   */
 
-    /* =====================================================
-       MEAL
-    ===================================================== */
+  const meal =
+    primaryFlightData?.mbg?.find(
+      (item: any) =>
+        item?.ssr_type === "Meal"
+    )?.ssr_info ||
+    "No Meal";
 
-    const meal =
-      flightData?.mbg?.find(
-        (item: any) =>
-          item?.ssr_type === "Meal"
-      )?.ssr_info ||
-      "No Meal";
+  /*
+   * PASSENGER
+   */
 
+  const passenger =
+    booking.passengerName ||
+    primaryFlightData?.trv?.[0]?.name ||
+    "Guest";
 
-    /* =====================================================
-       CABIN
-    ===================================================== */
+  /*
+   * PASSENGER TYPE
+   */
 
-    const cabin =
-      segment?.cbcls ||
-      "Economy";
+  const passengerType =
+    primaryFlightData?.trv?.[0]?.pxt ||
+    "Adult";
 
+  /*
+   * BAGGAGE
+   */
 
-    /* =====================================================
-       PASSENGER
-    ===================================================== */
+  const baggage =
+    primaryFlightData?.trv?.[0]?.chbg ||
+    primaryFlightData?.trv?.[0]?.cbbg ||
+    "As per airline policy";
 
-    const passenger =
-      booking.passengerName ||
-      flightData?.trv?.[0]?.name ||
-      "Guest";
+  /*
+   * PNR
+   */
 
+  const pnr =
+    booking.pnr ||
+    primaryFlightData?.pnr ||
+    primaryFlightData?.gdsPnr ||
+    "—";
 
-    /* =====================================================
-       PASSENGER TYPE
-    ===================================================== */
+  return {
+    journeys,
 
-    const passengerType =
-      flightData?.trv?.[0]?.pxt ||
-      "Adult";
+    /*
+     * Keep these fields for the rest of the existing page.
+     */
 
+    flightData: primaryFlightData,
 
-    /* =====================================================
-       BAGGAGE
-    ===================================================== */
+    segments:
+      primaryJourney?.segments ?? [],
 
-    const baggage =
-      flightData?.trv?.[0]?.chbg ||
-      flightData?.trv?.[0]?.cbbg ||
-      "As per airline policy";
+    firstSegment:
+      primaryJourney?.firstSegment ?? null,
 
+    lastSegment:
+      primaryJourney?.lastSegment ?? null,
 
-    /* =====================================================
-       PNR
-    ===================================================== */
+    fromCity:
+      primaryJourney?.fromCity ?? "—",
 
-    const pnr =
-      booking.pnr ||
-      flightData?.pnr ||
-      flightData?.gdsPnr ||
-      "—";
+    toCity:
+      primaryJourney?.toCity ?? "—",
 
+    fromCode:
+      primaryJourney?.fromCode ?? "—",
 
-    return {
-      flightData,
-      segment,
+    toCode:
+      primaryJourney?.toCode ?? "—",
 
-      fromCity,
-      toCity,
+    airline:
+      primaryJourney?.airline ?? "—",
 
-      fromCode,
-      toCode,
+    flightNumber:
+      primaryJourney?.flightNumber ?? "—",
 
-      airline,
-      flightNumber,
+    departure:
+      primaryJourney?.departure ?? null,
 
-      departure,
-      arrival,
+    arrival:
+      primaryJourney?.arrival ?? null,
 
-      seat,
-      meal,
-      cabin,
+    seat,
+    meal,
 
-      passenger,
-      passengerType,
-      baggage,
+    cabin:
+      primaryJourney?.cabin ?? "Economy",
 
-      pnr,
-    };
-  }, [booking]);
+    passenger,
+    passengerType,
+    baggage,
 
+    pnr,
+  };
+}, [booking]);
 
   /* =======================================================
      DOWNLOAD PDF
@@ -627,141 +736,312 @@ function TicketPageContent() {
 
           </div>
 
+<div className="p-6 md:p-8">
 
-          {/* ===============================================
-              JOURNEY
-          =============================================== */}
+<div className="space-y-8">
 
-          <div className="p-6 md:p-8">
+  {ticketData.journeys.length > 0 ? (
+    ticketData.journeys.map(
+      (journey: any, journeyIndex: number) => (
+        <div key={journeyIndex}>
 
-            <div className="mb-4 flex items-center justify-between">
+          {/* =================================================
+              JOURNEY HEADER
+          ================================================= */}
 
-              <div>
+          <div className="mb-4 flex items-center justify-between">
 
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  Your Journey
-                </p>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                {ticketData.journeys.length > 1
+                  ? journeyIndex === 0
+                    ? "Outbound Journey"
+                    : "Return Journey"
+                  : "Your Journey"}
+              </p>
 
-                <p className="mt-1 text-lg font-bold text-slate-900">
-                  {ticketData.airline}
-                </p>
+              <p className="mt-1 text-lg font-bold text-slate-900">
+                {journey.airline}
+              </p>
+            </div>
 
-              </div>
+            <div className="text-right">
 
-              <div className="text-right">
+              <p className="text-xs text-slate-500">
+                Flight
+              </p>
 
-                <p className="text-xs text-slate-500">
-                  Flight
-                </p>
+              <p className="font-bold text-slate-900">
+                {journey.flightNumber}
+              </p>
 
-                <p className="font-bold text-slate-900">
-                  {ticketData.flightNumber}
-                </p>
+            </div>
 
-              </div>
+          </div>
+
+
+          {/* =================================================
+              COMPLETE JOURNEY
+          ================================================= */}
+
+          <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-200 md:p-7">
+
+            <div className="space-y-4">
+
+              {journey.segments.map(
+                (segment: any, segmentIndex: number) => {
+
+                  const segmentFromCode =
+                    segment?.orgapc || "—";
+
+                  const segmentToCode =
+                    segment?.dstapc || "—";
+
+                  const segmentFromCity =
+                    segment?.orgcty || "—";
+
+                  const segmentToCity =
+                    segment?.dstcty || "—";
+
+                  const segmentDeparture =
+                    segment?.dptm || null;
+
+                  const segmentArrival =
+                    segment?.artm || null;
+
+                  const segmentAirline =
+                    segment?.airnm ||
+                    journey.airline ||
+                    "—";
+
+                  const segmentFlightNumber =
+                    segment?.aircd &&
+                    segment?.fltno
+                      ? `${segment.aircd}-${segment.fltno}`
+                      : segment?.fltno ||
+                        "—";
+
+                  return (
+                    <div key={segmentIndex}>
+
+                      {/* =================================================
+                          FLIGHT SEGMENT
+                      ================================================= */}
+
+                      <div className="rounded-2xl border border-slate-200 bg-white p-5">
+
+                        <div className="mb-4 flex items-center justify-between">
+
+                          <div>
+
+                            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+
+                              {journey.segments.length > 1
+                                ? segmentIndex === 0
+                                  ? "First Flight"
+                                  : `Connecting Flight ${segmentIndex + 1}`
+                                : journeyIndex === 1
+                                  ? "Return Flight"
+                                  : "Flight"}
+
+                            </p>
+
+                            <p className="mt-1 font-bold text-slate-900">
+
+                              {segmentAirline}{" "}
+
+                              {segmentFlightNumber}
+
+                            </p>
+
+                          </div>
+
+                          {segment?.cbcls && (
+                            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                              {segment.cbcls}
+                            </span>
+                          )}
+
+                        </div>
+
+
+                        {/* =================================================
+                            ROUTE
+                        ================================================= */}
+
+                        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+
+                          {/* FROM */}
+
+                          <div>
+
+                            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                              Departure
+                            </p>
+
+                            <p className="mt-2 text-3xl font-black text-slate-900 md:text-4xl">
+                              {segmentFromCode}
+                            </p>
+
+                            <p className="mt-1 text-sm font-medium text-slate-600">
+                              {segmentFromCity}
+                            </p>
+
+                            <p className="mt-3 text-sm font-bold text-slate-900">
+                              {formatDate(
+                                segmentDeparture
+                              )}
+                            </p>
+
+                            <p className="text-sm text-slate-500">
+                              {formatTime(
+                                segmentDeparture
+                              )}
+                            </p>
+
+                          </div>
+
+
+                          {/* CENTER */}
+
+                          <div className="flex flex-col items-center">
+
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                              <Plane size={22} />
+                            </div>
+
+                            <div className="mt-2 flex items-center gap-1 text-xs text-slate-400">
+
+                              <span className="h-px w-8 bg-slate-300" />
+
+                              <ArrowRight
+                                size={15}
+                                className="text-blue-500"
+                              />
+
+                              <span className="h-px w-8 bg-slate-300" />
+
+                            </div>
+
+                          </div>
+
+
+                          {/* TO */}
+
+                          <div className="text-right">
+
+                            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                              Arrival
+                            </p>
+
+                            <p className="mt-2 text-3xl font-black text-slate-900 md:text-4xl">
+                              {segmentToCode}
+                            </p>
+
+                            <p className="mt-1 text-sm font-medium text-slate-600">
+                              {segmentToCity}
+                            </p>
+
+                            <p className="mt-3 text-sm font-bold text-slate-900">
+                              {formatDate(
+                                segmentArrival
+                              )}
+                            </p>
+
+                            <p className="text-sm text-slate-500">
+                              {formatTime(
+                                segmentArrival
+                              )}
+                            </p>
+
+                          </div>
+
+                        </div>
+
+                      </div>
+
+
+                      {/* =================================================
+                          LAYOVER
+                      ================================================= */}
+
+                      {segmentIndex <
+                        journey.segments.length - 1 && (
+                        <div className="flex items-center justify-center py-3">
+
+                          <div className="flex items-center gap-2 rounded-full bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+
+                            <span>
+                              Layover at{" "}
+                              {segmentToCity}{" "}
+                              ({segmentToCode})
+                            </span>
+
+                          </div>
+
+                        </div>
+                      )}
+
+                    </div>
+                  );
+                }
+              )}
 
             </div>
 
 
-            <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-200 md:p-7">
+            {/* =================================================
+                COMPLETE JOURNEY SUMMARY
+            ================================================= */}
 
-              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+{journey.segments.length > 1 && (
+  <div className="mt-5 rounded-2xl bg-blue-50 p-4">
 
+    <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
+      Complete Route
+    </p>
 
-                {/* FROM */}
+    <p className="mt-2 text-base font-bold text-blue-900">
+      {[
+        journey.segments[0]?.orgapc,
+        ...journey.segments.map(
+          (segment: any) => segment?.dstapc
+        ),
+      ]
+        .filter(Boolean)
+        .filter(
+          (code: string, index: number, arr: string[]) =>
+            index === 0 || code !== arr[index - 1]
+        )
+        .join(" → ")}
+    </p>
 
-                <div>
+  </div>
+)}
 
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    Departure
-                  </p>
+          </div>
 
-                  <p className="mt-2 text-3xl font-black text-slate-900 md:text-4xl">
-                    {ticketData.fromCode}
-                  </p>
+        </div>
+      )
+    )
+  ) : (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center">
 
-                  <p className="mt-1 text-sm font-medium text-slate-600">
-                    {ticketData.fromCity}
-                  </p>
+      <p className="font-semibold text-slate-700">
+        Flight details unavailable
+      </p>
 
-                  <p className="mt-3 text-sm font-bold text-slate-900">
-                    {formatDate(
-                      ticketData.departure
-                    )}
-                  </p>
+      <p className="mt-1 text-sm text-slate-500">
+        Please contact support if this booking does not display correctly.
+      </p>
 
-                  <p className="text-sm text-slate-500">
-                    {formatTime(
-                      ticketData.departure
-                    )}
-                  </p>
+    </div>
+  )}
 
-                </div>
-
-
-                {/* CENTER */}
-
-                <div className="flex flex-col items-center">
-
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-
-                    <Plane size={22} />
-
-                  </div>
-
-                  <div className="mt-2 flex items-center gap-1 text-xs text-slate-400">
-
-                    <span className="h-px w-8 bg-slate-300" />
-
-                    <ArrowRight
-                      size={15}
-                      className="text-blue-500"
-                    />
-
-                    <span className="h-px w-8 bg-slate-300" />
-
-                  </div>
-
-                </div>
+</div>
 
 
-                {/* TO */}
-
-                <div className="text-right">
-
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    Arrival
-                  </p>
-
-                  <p className="mt-2 text-3xl font-black text-slate-900 md:text-4xl">
-                    {ticketData.toCode}
-                  </p>
-
-                  <p className="mt-1 text-sm font-medium text-slate-600">
-                    {ticketData.toCity}
-                  </p>
-
-                  <p className="mt-3 text-sm font-bold text-slate-900">
-                    {formatDate(
-                      ticketData.arrival ||
-                        ticketData.departure
-                    )}
-                  </p>
-
-                  <p className="text-sm text-slate-500">
-                    {formatTime(
-                      ticketData.arrival
-                    )}
-                  </p>
-
-                </div>
-
-              </div>
-
-            </div>
-
-
-            {/* =============================================
+                     {/* =============================================
                 PASSENGER
             ============================================= */}
 
