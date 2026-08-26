@@ -488,15 +488,66 @@ const totalPrice =
         price + returnPrice
       )
     : price;
-
   /* ---------------------------------------------
      STOPS
-  --------------------------------------------- */
+     --------------------------------------------- */
 
- const stopCount =
-    typeof flight.stops === "number"
-      ? flight.stops
-      : Math.max(segments.length - 1, 0);
+  const getStopCount = (
+    raw: any,
+    normalizedSegments: FlightSegment[]
+  ): number => {
+    // 1. Explicit numeric stops from provider
+    if (typeof raw?.stops === "number") {
+      return Math.max(raw.stops, 0);
+    }
+
+    // 2. Provider may return stops as a string
+    if (
+      raw?.stops !== undefined &&
+      raw?.stops !== null &&
+      raw?.stops !== ""
+    ) {
+      const parsedStops = Number(raw.stops);
+
+      if (Number.isFinite(parsedStops)) {
+        return Math.max(parsedStops, 0);
+      }
+    }
+
+    // 3. Alternative Bonton field names
+    const providerStops =
+      raw?.stp ??
+      raw?.stopCount ??
+      raw?.stopcount ??
+      raw?.numberOfStops;
+
+    if (
+      providerStops !== undefined &&
+      providerStops !== null &&
+      providerStops !== ""
+    ) {
+      const parsedStops = Number(providerStops);
+
+      if (Number.isFinite(parsedStops)) {
+        return Math.max(parsedStops, 0);
+      }
+    }
+
+    // 4. Most reliable fallback:
+    // number of connections = segments - 1
+    if (Array.isArray(normalizedSegments)) {
+      return Math.max(normalizedSegments.length - 1, 0);
+    }
+
+    return 0;
+  };
+
+  const stopCount = getStopCount(
+    rawFlight,
+    segments
+  );
+
+
 
 const layoverMinutes =
   segments.length > 1
@@ -605,13 +656,10 @@ const layoverSegment =
       duration:
         rawReturn.duration,
 
-      stops:
-        typeof rawReturn.stops === "number"
-          ? rawReturn.stops
-          : Math.max(
-              returnSegments.length - 1,
-              0
-            ),
+      stops: getStopCount(
+         rawReturn,
+         returnSegments
+),
 
       price:
         Number(rawReturn.price ?? 0),
@@ -1404,6 +1452,51 @@ console.log(
   "========== ENRICHED FILTERED FLIGHTS =========="
 );
 
+console.log(
+  "========== FILTERED FLIGHT STOP DEBUG =========="
+);
+
+console.log(
+  enrichedFlights.map((f: any, index: number) => ({
+    index,
+
+    id: f.id,
+
+    tripType: f.tripType,
+
+    stops: f.stops,
+
+    stp: f.stp,
+
+    stopCount: f.stopCount,
+
+    segments: f.segments,
+
+    diseg: f.diseg,
+
+    fltseg: f.fltseg,
+
+    onward: f.onward
+      ? {
+          stops: f.onward.stops,
+          stp: f.onward.stp,
+          segments: f.onward.segments,
+          diseg: f.onward.diseg,
+          fltseg: f.onward.fltseg,
+        }
+      : null,
+
+    returnFlight: f.returnFlight
+      ? {
+          stops: f.returnFlight.stops,
+          stp: f.returnFlight.stp,
+          segments: f.returnFlight.segments,
+          diseg: f.returnFlight.diseg,
+          fltseg: f.returnFlight.fltseg,
+        }
+      : null,
+  }))
+);
 console.log(
   enrichedFlights.slice(0, 5).map((f: any) => ({
     id: f.id,
