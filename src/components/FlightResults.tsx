@@ -1018,11 +1018,7 @@ const buildNextFilters = ({
     // Outbound
     nextFilters.stp = stops;
 
-    /*
-      IMPORTANT:
-      For round trips Bonton also supports rstp.
-      Keep this in sync with the selected stop filters.
-    */
+    
     if (isRoundTrip) {
       nextFilters.rstp = stops;
     }
@@ -1212,6 +1208,7 @@ console.log(
             arrival: f.returnFlight.arrival,
             duration: f.returnFlight.duration,
             stops: f.returnFlight.stops,
+            segments: f.returnFlight.segments,
             price: f.returnFlight.price,
             tId: f.returnFlight.tId,
         }
