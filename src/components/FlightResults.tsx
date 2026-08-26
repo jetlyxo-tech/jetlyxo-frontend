@@ -882,6 +882,8 @@ export default function FlightResults({
   useState<string>(
     (flights[0] as any)?.stid ?? ""
   );
+ const originalSearchStid =
+  (flights[0] as any)?.stid ?? "";
 
 const [nextSkip, setNextSkip] =
   useState(flights.length);
@@ -891,8 +893,13 @@ const [loadingMore, setLoadingMore] =
 
 const [hasMoreFlights, setHasMoreFlights] =
   useState(true);
+const [providerFiltered, setProviderFiltered] =
+  useState(false);
 
 const nextRequestInProgress = useRef(false);
+const originalSearchStidRef = useRef(
+  (flights[0] as any)?.stid ?? ""
+);
 const priceInitialized = useRef(false);
 
 useEffect(() => {
@@ -902,10 +909,14 @@ useEffect(() => {
   setOriginalFlights(flights);
 
   const firstFlight = flights[0] as any;
+  const newStid = firstFlight?.stid ?? "";
 
-  setSearchStid(firstFlight?.stid ?? "");
+  originalSearchStidRef.current = newStid;
+
+  setSearchStid(newStid);
   setNextSkip(flights.length);
   setHasMoreFlights(true);
+  setProviderFiltered(false);
 }, [flights]);
 
 useEffect(() => {
@@ -1080,7 +1091,7 @@ try {
     );
 
     console.log({
-      stid: searchStid,
+      stid: originalSearchStidRef.current,
       filters: nextFilters,
       skip: nextSkip,
       take: 20,
@@ -1088,22 +1099,18 @@ try {
       isret: isRoundTrip,
     });
 
-    const response = await nextFlights({
-      stid: searchStid,
-      filters: nextFilters,
-      skip: nextSkip,
-      take: 20,
-      isdom: true,
-      isret: isRoundTrip,
-    });
+ const response = await nextFlights({
+  stid: originalSearchStid,
+  filters: nextFilters,
+  skip: 0,
+  take: 20,
+  isdom: true,
+  isret: isRoundTrip,
+});
 
     const newFlights = response.flights ?? [];
 
-    if (response.stid) {
-      setSearchStid(response.stid);
-    }
-
-    setHasMoreFlights(
+     setHasMoreFlights(
       response.isComplete !== true
 );
 
@@ -1354,7 +1361,7 @@ if (response.stid) {
 
 
 setFlightList(enrichedFlights);
-
+setProviderFiltered(true);
 
 setNextSkip(enrichedFlights.length);
 
@@ -1507,6 +1514,7 @@ const sortedFlights = useMemo(() => {
   setFilters(resetFilters);
   setSelectedAirlines([]);
   setFlightList(originalFlights);
+  setProviderFiltered(false);
   const originalStid =
     (originalFlights[0] as any)?.stid ?? "";
 
