@@ -145,16 +145,25 @@ type FlightResultsProps = {
 type NextFlightFilters = {
   minp: number;
   maxp: number;
+
   air?: {
     airline_code: string;
     airline_name: string;
   }[];
+
   stp?: number[];
   rstp?: number[];
+
+  deptm?: string[];
+  rdeptm?: string[];
+
+  arrtm?: string[];
+  rarrtm?: string[];
+
+  laydur?: string[];
+
+  airstr?: string[];
 };
-/* ---------------------------------------------
-   HELPERS
---------------------------------------------- */
 
 function parseDuration(duration: string) {
   const hrs = duration.match(/(\d+)h/);
@@ -928,21 +937,19 @@ useEffect(() => {
   }
 }, [originalFlights]);
 
-/* ---------------------------------------------
-   BONTON NEXT FILTER BUILDER
---------------------------------------------- */
-
 const buildNextFilters = ({
   nextSelectedAirlines = selectedAirlines,
   nextNonStop = filters.nonStop,
   nextOneStop = filters.oneStop,
   nextPriceLimit = priceLimit,
+  nextDepartureTimes = [],
 }: {
   nextSelectedAirlines?: string[];
   nextNonStop?: boolean;
   nextOneStop?: boolean;
   nextPriceLimit?: number;
-} = {}) => {
+  nextDepartureTimes?: string[];
+} = {}): NextFlightFilters => {
   const isRoundTrip =
     (originalFlights[0] as any)?.tripType === "ROUND_TRIP";
 
@@ -951,9 +958,8 @@ const buildNextFilters = ({
     maxp: nextPriceLimit,
   };
 
-  // =========================
-  // AIRLINE
-  // =========================
+
+
   if (nextSelectedAirlines.length > 0) {
     const airlineMap = new Map<
       string,
@@ -986,9 +992,7 @@ const buildNextFilters = ({
     }
   }
 
-  // =========================
-  // STOPS
-  // =========================
+
   if (nextNonStop || nextOneStop) {
     const stops: number[] = [];
 
@@ -1003,10 +1007,19 @@ const buildNextFilters = ({
     // Outbound
     nextFilters.stp = stops;
 
-    // Return journey for ROUND_TRIP
+    /*
+      IMPORTANT:
+      For round trips Bonton also supports rstp.
+      Keep this in sync with the selected stop filters.
+    */
     if (isRoundTrip) {
       nextFilters.rstp = stops;
     }
+  }
+
+
+  if (nextDepartureTimes.length > 0) {
+    nextFilters.deptm = nextDepartureTimes;
   }
 
   console.log(
@@ -1015,22 +1028,27 @@ const buildNextFilters = ({
 
   console.log({
     isRoundTrip,
-    selectedAirlines: nextSelectedAirlines,
+
+    selectedAirlines:
+      nextSelectedAirlines,
+
     price: {
       minp: nextFilters.minp,
       maxp: nextFilters.maxp,
     },
+
     stp: nextFilters.stp,
     rstp: nextFilters.rstp,
+
+    deptm: nextFilters.deptm,
+
     air: nextFilters.air,
   });
 
   return nextFilters;
 };
 
-/* ---------------------------------------------
-   LOAD MORE FLIGHTS — BONTON NEXT
---------------------------------------------- */
+
 
 const loadNextFlights = useCallback(async () => {
   if (!searchStid) {
@@ -1067,7 +1085,7 @@ try {
       skip: nextSkip,
       take: 20,
       isdom: true,
-      isret: false,
+      isret: isRoundTrip,
     });
 
     const response = await nextFlights({
@@ -1216,19 +1234,19 @@ console.log(
 }, [originalFlights]);
 
 
-
-
 const applyProviderFilters = useCallback(
   async ({
     nextSelectedAirlines = selectedAirlines,
     nextNonStop = filters.nonStop,
     nextOneStop = filters.oneStop,
     nextPriceLimit = priceLimit,
+    nextDepartureTimes = [],
   }: {
     nextSelectedAirlines?: string[];
     nextNonStop?: boolean;
     nextOneStop?: boolean;
     nextPriceLimit?: number;
+    nextDepartureTimes?: string[];
   } = {}) => {
     if (!searchStid) {
       toast.error("Flight search session is missing");
@@ -1247,118 +1265,145 @@ const applyProviderFilters = useCallback(
     try {
       setLoadingMore(true);
 
-      /*
-       * IMPORTANT:
-       * Detect the original search type.
-       *
-       * ONE_WAY  -> isret: false
-       * ROUND_TRIP -> isret: true
-       */
+
       const isRoundTrip =
-        (originalFlights[0] as any)?.tripType === "ROUND_TRIP";
+        (originalFlights[0] as any)?.tripType ===
+        "ROUND_TRIP";
+
 
       const nextFilters = buildNextFilters({
         nextSelectedAirlines,
         nextNonStop,
         nextOneStop,
         nextPriceLimit,
+        nextDepartureTimes,
       });
-
-      console.log("========== APPLY BONTON FILTERS ==========");
-      console.log({
-        tripType: isRoundTrip ? "ROUND_TRIP" : "ONE_WAY",
-        stid: searchStid,
-        filters: nextFilters,
-        skip: 0,
-        take: 20,
-        isdom: true,
-        isret: isRoundTrip,
-      });
-
-      const response = await nextFlights({
-        stid: searchStid,
-        filters: nextFilters,
-        skip: 0,
-        take: 20,
-
-        // Keep domestic behaviour
-        isdom: true,
-
-        // THIS IS THE IMPORTANT FIX
-        isret: isRoundTrip,
-      });
-
-      const newFlights = response.flights ?? [];
 
       console.log(
-        "========== BONTON FILTER RESPONSE =========="
-      );
-      console.log("Received flights:", newFlights.length);
-      console.log("Response stid:", response.stid);
-
-      /*
-       * Bonton returned a NEW filtered result set.
-       * Replace the current list.
-       */
-      const enrichedFlights = newFlights.map((flight) => ({
-        ...flight,
-
-        searchId:
-          flight.searchId ||
-          flightList[0]?.searchId ||
-          "",
-
-        stid:
-          (flight as any).stid ||
-          response.stid ||
-          searchStid,
-      }));
-
-      /*
-       * Provider may return a new STID.
-       */
-      if (response.stid) {
-        setSearchStid(response.stid);
-      }
-
-      /*
-       * Replace current results.
-       */
-      setFlightList(enrichedFlights);
-
-      /*
-       * Next Load More starts after filtered results.
-       */
-      setNextSkip(enrichedFlights.length);
-
-      /*
-       * Provider says whether more results exist.
-       */
-      setHasMoreFlights(response.isComplete !== true);
-
-      if (!enrichedFlights.length) {
-        setHasMoreFlights(false);
-
-        console.log(
-          "Bonton returned 0 flights for selected filters"
-        );
-
-        return;
-      }
-
-      console.log(
-        "========== FILTERED UI UPDATED =========="
+        "========== APPLY BONTON FILTERS =========="
       );
 
       console.log({
         tripType: isRoundTrip
           ? "ROUND_TRIP"
           : "ONE_WAY",
-        received: enrichedFlights.length,
-        nonStop: nextNonStop,
-        oneStop: nextOneStop,
-        airlines: nextSelectedAirlines,
-        priceLimit: nextPriceLimit,
+
+        stid: searchStid,
+
+        filters: nextFilters,
+
+        skip: 0,
+        take: 20,
+
+        isdom: true,
+
+        isret: isRoundTrip,
+      });
+
+      
+      const response = await nextFlights({
+        stid: searchStid,
+
+        filters: nextFilters,
+
+        skip: 0,
+
+        take: 20,
+
+        isdom: true,
+
+        isret: isRoundTrip,
+      });
+
+      const newFlights =
+        response.flights ?? [];
+
+      console.log(
+        "========== BONTON FILTER RESPONSE =========="
+      );
+
+      console.log(
+        "Received flights:",
+        newFlights.length
+      );
+
+      console.log(
+        "Response stid:",
+        response.stid
+      );
+
+      
+     const enrichedFlights = newFlights.map((flight) => ({
+  ...flight,
+
+  searchId:
+    flight.searchId ||
+    flightList[0]?.searchId ||
+    "",
+
+  stid:
+    (flight as any).stid ||
+    response.stid ||
+    searchStid,
+}));
+
+
+if (response.stid) {
+  setSearchStid(response.stid);
+}
+
+
+setFlightList(enrichedFlights);
+
+
+setNextSkip(enrichedFlights.length);
+
+
+setHasMoreFlights(
+  response.isComplete !== true
+);
+
+console.log(
+  "========== FILTERED UI UPDATED =========="
+);
+
+console.log({
+  received: enrichedFlights.length,
+  isRoundTrip,
+  filters: nextFilters,
+});
+
+
+if (!enrichedFlights.length) {
+  console.log(
+    "Bonton returned 0 flights for selected filters"
+  );
+
+  return;
+}
+
+      console.log({
+        tripType: isRoundTrip
+          ? "ROUND_TRIP"
+          : "ONE_WAY",
+
+        received:
+          enrichedFlights.length,
+
+        nonStop:
+          nextNonStop,
+
+        oneStop:
+          nextOneStop,
+
+        airlines:
+          nextSelectedAirlines,
+
+        priceLimit:
+          nextPriceLimit,
+
+        departureTimes:
+          nextDepartureTimes,
       });
     } catch (error) {
       console.error(
@@ -1387,114 +1432,43 @@ const applyProviderFilters = useCallback(
     originalFlights,
   ]
 );
-/* ---------------------------------------------
-   FILTERS
---------------------------------------------- */
-const filteredFlights = useMemo(() => {
-  let list = [...normalizedFlights];
 
-  /*
-   * IMPORTANT:
-   *
-   * These filters are handled by Bonton:
-   * - Price
-   * - Stops
-   * - Airlines
-   *
-   * Therefore DO NOT apply them again here.
-   *
-   * The flightList already contains Bonton's filtered
-   * response.
-   */
 
-  /*
-   * FRONTEND-ONLY DEPARTURE TIME FILTERS
-   *
-   * These are still applied locally because they are
-   * not currently included in the Bonton filter payload.
-   */
 
-  if (filters.earlyMorning) {
-    list = list.filter((f) => {
-      const hr = Number(f.dep.split(":")[0]) || 0;
-      return hr < 6;
-    });
-  }
+const sortedFlights = useMemo(() => {
+  const list = [...normalizedFlights];
 
-  if (filters.morning) {
-    list = list.filter((f) => {
-      const hr = Number(f.dep.split(":")[0]) || 0;
-      return hr >= 6 && hr < 12;
-    });
-  }
+  switch (sortBy) {
+    case "Cheapest":
+      list.sort(
+        (a, b) =>
+          a.priceNumber - b.priceNumber
+      );
+      break;
 
-  if (filters.afternoon) {
-    list = list.filter((f) => {
-      const hr = Number(f.dep.split(":")[0]) || 0;
-      return hr >= 12 && hr < 18;
-    });
-  }
+    case "Fastest":
+      list.sort(
+        (a, b) =>
+          parseDuration(a.duration) -
+          parseDuration(b.duration)
+      );
+      break;
 
-  if (filters.evening) {
-    list = list.filter((f) => {
-      const hr = Number(f.dep.split(":")[0]) || 0;
-      return hr >= 18;
-    });
+    case "Departure Time":
+      list.sort((a, b) =>
+        a.dep.localeCompare(b.dep)
+      );
+      break;
+
+    case "Airline":
+      list.sort((a, b) =>
+        a.airline.localeCompare(b.airline)
+      );
+      break;
   }
 
   return list;
-}, [
-  normalizedFlights,
-  filters.earlyMorning,
-  filters.morning,
-  filters.afternoon,
-  filters.evening,
-]);
-
-/* ---------------------------------------------
-   SORTING
---------------------------------------------- */
-
-  const sortedFlights =
-    useMemo(() => {
-      const list = [...filteredFlights];
-
-      switch (sortBy) {
-        case "Cheapest":
-          list.sort(
-            (a, b) =>
-              a.priceNumber -
-              b.priceNumber
-          );
-          break;
-
-        case "Fastest":
-          list.sort(
-            (a, b) =>
-              parseDuration(a.duration) -
-              parseDuration(b.duration)
-          );
-          break;
-
-        case "Departure Time":
-          list.sort((a, b) =>
-            a.dep.localeCompare(
-              b.dep
-            )
-          );
-          break;
-
-        case "Airline":
-          list.sort((a, b) =>
-            a.airline.localeCompare(
-              b.airline
-            )
-          );
-          break;
-      }
-
-      return list;
-    }, [filteredFlights, sortBy]);
+}, [normalizedFlights, sortBy]);
   return (
     <div
       id="results"
@@ -1533,6 +1507,10 @@ const filteredFlights = useMemo(() => {
   setFilters(resetFilters);
   setSelectedAirlines([]);
   setFlightList(originalFlights);
+  const originalStid =
+    (originalFlights[0] as any)?.stid ?? "";
+
+  setSearchStid(originalStid);
   setNextSkip(originalFlights.length);
   setHasMoreFlights(true);
 
@@ -1665,69 +1643,123 @@ setPriceLimit(originalMax);
 
         </div>
 
-        {/* DEPARTURE */}
+{/* DEPARTURE */}
 
-        <div className="mb-8">
+<div className="mb-8">
+  <h4 className="font-semibold text-white mb-4">
+    Departure Time
+  </h4>
 
-          <h4 className="font-semibold text-white mb-4">
-            Departure Time
-          </h4>
+  <div className="space-y-3">
+    {[
+      {
+        key: "earlyMorning",
+        label: "Early Morning (00-06)",
+        bontonValue: "Before 6AM",
+      },
+      {
+        key: "morning",
+        label: "Morning (06-12)",
+        bontonValue: "6AM - 12PM",
+      },
+      {
+        key: "afternoon",
+        label: "Afternoon (12-18)",
+        bontonValue: "12PM - 6PM",
+      },
+      {
+        key: "evening",
+        label: "Evening (18-24)",
+        bontonValue: "After 6PM",
+      },
+    ].map((item) => {
+      const filterKey =
+        item.key as keyof typeof filters;
 
-          <div className="space-y-3">
+      const isChecked =
+        Boolean(filters[filterKey]);
 
-            {[
-              {
-                key: "earlyMorning",
-                label: "Early Morning (00-06)",
-              },
-              {
-                key: "morning",
-                label: "Morning (06-12)",
-              },
-              {
-                key: "afternoon",
-                label: "Afternoon (12-18)",
-              },
-              {
-                key: "evening",
-                label: "Evening (18-24)",
-              },
-            ].map((item) => (
+      return (
+        <label
+          key={item.key}
+          className="flex items-center gap-3 cursor-pointer text-white"
+        >
+          <input
+            type="checkbox"
+            checked={isChecked}
+            onChange={() => {
+              /*
+               * Build the NEW selected time list
+               * using the current checkbox state.
+               */
+              const currentTimes = [
+                filters.earlyMorning
+                  ? "Before 6AM"
+                  : null,
 
-              <label
-                key={item.key}
-                className="flex items-center gap-3 cursor-pointer text-white"
-              >
+                filters.morning
+                  ? "6AM - 12PM"
+                  : null,
 
-                <input
-                  type="checkbox"
-                  checked={
-                    filters[
-                      item.key as keyof typeof filters
-                    ]
-                  }
-                  onChange={() =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      [item.key]:
-                        !prev[
-                          item.key as keyof typeof prev
-                        ],
-                    }))
-                  }
-                />
+                filters.afternoon
+                  ? "12PM - 6PM"
+                  : null,
 
-                {item.label}
+                filters.evening
+                  ? "After 6PM"
+                  : null,
+              ].filter(Boolean) as string[];
 
-              </label>
+              const nextTimes = isChecked
+                ? currentTimes.filter(
+                    (time) =>
+                      time !==
+                      item.bontonValue
+                  )
+                : [
+                    ...currentTimes,
+                    item.bontonValue,
+                  ];
 
-            ))}
+              /*
+               * Update checkbox UI immediately.
+               */
+              setFilters((prev) => ({
+                ...prev,
+                [filterKey]: !prev[
+                  filterKey
+                ],
+              }));
 
-          </div>
+              console.log(
+                "DEPARTURE TIME FILTER → NEXT:",
+                nextTimes
+              );
 
-        </div>
+              /*
+               * Send the NEW selection to Bonton.
+               *
+               * If nextTimes is empty, deptm is omitted
+               * and Bonton returns the unrestricted
+               * departure-time result set.
+               */
+              applyProviderFilters({
+                nextDepartureTimes:
+                  nextTimes,
+              });
+            }}
+          />
 
-        {/* AIRLINES */}
+          <span>
+            {item.label}
+          </span>
+        </label>
+      );
+    })}
+  </div>
+</div>
+
+      
 
         <div>
 
