@@ -473,7 +473,17 @@ console.log({
      TOTAL PRICE
   --------------------------------------------- */
 
-  const returnPrice = getValidNumber(
+const hasReturnFlight =
+  Boolean(rawFlight.returnFlight);
+
+const resolvedTripType =
+  hasReturnFlight
+    ? "ROUND_TRIP"
+    : rawFlight.tripType === "ROUND_TRIP"
+      ? "ROUND_TRIP"
+      : "ONEWAY";
+
+const returnPrice = getValidNumber(
   rawFlight.returnFlight?.price,
   rawFlight.returnFlight?.totalPrice,
   rawFlight.returnFlight?.fare,
@@ -482,7 +492,7 @@ console.log({
 );
 
 const totalPrice =
-  rawFlight.tripType === "ROUND_TRIP"
+  resolvedTripType === "ROUND_TRIP"
     ? getValidNumber(
         rawFlight.totalPrice,
         price + returnPrice
@@ -593,10 +603,7 @@ const layoverSegment =
     | NormalizedFlight["returnFlight"]
     | undefined;
 
-  if (
-    rawFlight.tripType === "ROUND_TRIP" &&
-    rawFlight.returnFlight
-  ) {
+  if (hasReturnFlight) {
     const rawReturn = rawFlight.returnFlight;
 
     const rawReturnSegments =
@@ -802,13 +809,13 @@ const layoverSegment =
       flight.tId,
 
     /* ROUND TRIP */
-    tripType:
-      rawFlight.tripType,
+   tripType:
+     resolvedTripType,
 
-    returnFlight:
-      normalizedReturnFlight,
+  returnFlight:
+     normalizedReturnFlight,
 
-    totalPrice,
+  totalPrice,
   };
 }
 
@@ -1426,14 +1433,15 @@ console.log(
 const enrichedFlights = newFlights.map((flight: any) => {
  
 
-  const hasReturnFlight =
-    Boolean(flight.returnFlight);
+ const hasReturnFlight =
+  Boolean(flight.returnFlight);
 
-  const resolvedTripType =
-    flight.tripType ||
-    (hasReturnFlight
+const resolvedTripType =
+  hasReturnFlight
+    ? "ROUND_TRIP"
+    : flight.tripType === "ROUND_TRIP"
       ? "ROUND_TRIP"
-      : "ONEWAY");
+      : "ONEWAY";
 
   return {
     ...flight,
