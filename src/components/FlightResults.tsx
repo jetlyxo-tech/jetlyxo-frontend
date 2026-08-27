@@ -1088,24 +1088,17 @@ const buildNextFilters = ({
     "========== BUILD NEXT FILTERS =========="
   );
 
-  console.log({
+console.log(
+  "========== FINAL BONTON FILTERS OBJECT =========="
+);
+
+console.dir(
+  {
     isRoundTrip,
-
-    selectedAirlines:
-      nextSelectedAirlines,
-
-    price: {
-      minp: nextFilters.minp,
-      maxp: nextFilters.maxp,
-    },
-
-    stp: nextFilters.stp,
-    rstp: nextFilters.rstp,
-
-    deptm: nextFilters.deptm,
-
-    air: nextFilters.air,
-  });
+    filters: nextFilters,
+  },
+  { depth: null }
+);
 
   return nextFilters;
 };
