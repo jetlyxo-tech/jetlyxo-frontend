@@ -1655,6 +1655,26 @@ const sortedFlights = useMemo(() => {
 
   return list;
 }, [normalizedFlights, sortBy]);
+
+console.log("========== FINAL UI FLIGHTS ==========");
+console.log("flightList:", flightList.length);
+console.log("normalizedFlights:", normalizedFlights.length);
+console.log("sortedFlights:", sortedFlights.length);
+
+console.table(
+  sortedFlights.map((flight: any) => ({
+    id: flight.id,
+    tripType: flight.tripType,
+    airline: flight.airline,
+    from: flight.from,
+    to: flight.to,
+    stops: flight.stops,
+    returnFrom: flight.returnFlight?.from,
+    returnTo: flight.returnFlight?.to,
+    returnStops: flight.returnFlight?.stops,
+  }))
+);
+
   return (
     <div
       id="results"
