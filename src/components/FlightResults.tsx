@@ -1013,29 +1013,33 @@ useEffect(() => {
   }
 }, [originalFlights]);
 
+
 const buildNextFilters = ({
   nextSelectedAirlines = selectedAirlines,
   nextNonStop = filters.nonStop,
   nextOneStop = filters.oneStop,
   nextPriceLimit = priceLimit,
   nextDepartureTimes = [],
+  applyPrice = false,
 }: {
   nextSelectedAirlines?: string[];
   nextNonStop?: boolean;
   nextOneStop?: boolean;
   nextPriceLimit?: number;
   nextDepartureTimes?: string[];
+  applyPrice?: boolean;
 } = {}): NextFlightFilters => {
   const isRoundTrip =
     (originalFlights[0] as any)?.tripType === "ROUND_TRIP";
 
-  const nextFilters: NextFlightFilters = {
-    minp: 0,
-    maxp: nextPriceLimit,
-  };
+   const nextFilters = {} as NextFlightFilters;
 
+  if (applyPrice) {
+    nextFilters.minp = 0;
+    nextFilters.maxp = nextPriceLimit;
+  }
 
-
+  // AIRLINE
   if (nextSelectedAirlines.length > 0) {
     const airlineMap = new Map<
       string,
@@ -1068,7 +1072,7 @@ const buildNextFilters = ({
     }
   }
 
-
+  // STOPS
   if (nextNonStop || nextOneStop) {
     const stops: number[] = [];
 
@@ -1080,16 +1084,14 @@ const buildNextFilters = ({
       stops.push(1);
     }
 
-    // Outbound
     nextFilters.stp = stops;
 
-    
     if (isRoundTrip) {
       nextFilters.rstp = stops;
     }
   }
 
-
+  // DEPARTURE TIME
   if (nextDepartureTimes.length > 0) {
     nextFilters.deptm = nextDepartureTimes;
   }
@@ -1098,20 +1100,26 @@ const buildNextFilters = ({
     "========== BUILD NEXT FILTERS =========="
   );
 
-console.log(
-  "========== FINAL BONTON FILTERS OBJECT =========="
-);
-
-console.dir(
-  {
+  console.log({
     isRoundTrip,
-    filters: nextFilters,
-  },
-  { depth: null }
-);
+    selectedAirlines: nextSelectedAirlines,
+
+    price: applyPrice
+      ? {
+          minp: nextFilters.minp,
+          maxp: nextFilters.maxp,
+        }
+      : "NOT APPLIED",
+
+    stp: nextFilters.stp,
+    rstp: nextFilters.rstp,
+    deptm: nextFilters.deptm,
+    air: nextFilters.air,
+  });
 
   return nextFilters;
 };
+
 
 
 
@@ -1309,12 +1317,14 @@ const applyProviderFilters = useCallback(
     nextOneStop = filters.oneStop,
     nextPriceLimit = priceLimit,
     nextDepartureTimes = [],
+    applyPrice = false,
   }: {
     nextSelectedAirlines?: string[];
     nextNonStop?: boolean;
     nextOneStop?: boolean;
     nextPriceLimit?: number;
     nextDepartureTimes?: string[];
+    applyPrice?: boolean;
   } = {}) => {
     if (!searchStid) {
       toast.error("Flight search session is missing");
@@ -1340,12 +1350,13 @@ const applyProviderFilters = useCallback(
 
 
       const nextFilters = buildNextFilters({
-        nextSelectedAirlines,
-        nextNonStop,
-        nextOneStop,
-        nextPriceLimit,
-        nextDepartureTimes,
-      });
+  nextSelectedAirlines,
+  nextNonStop,
+  nextOneStop,
+  nextPriceLimit,
+  nextDepartureTimes,
+  applyPrice,
+});
 
       console.log(
         "========== APPLY BONTON FILTERS =========="
@@ -1765,8 +1776,9 @@ setPriceLimit(originalMax);
     console.log("PRICE FILTER → NEXT:", value);
 
     applyProviderFilters({
-      nextPriceLimit: value,
-    });
+       nextPriceLimit: value,
+       applyPrice: true,
+});
   }}
   onTouchEnd={(e) => {
     const value = Number(e.currentTarget.value);
