@@ -473,15 +473,25 @@ console.log({
      TOTAL PRICE
   --------------------------------------------- */
 
+const rawReturn = rawFlight.returnFlight;
+
 const hasReturnFlight =
-  Boolean(rawFlight.returnFlight);
+  rawReturn &&
+  (
+    rawReturn.id ||
+    rawReturn.tId ||
+    rawReturn.from ||
+    rawReturn.to ||
+    rawReturn.departure ||
+    rawReturn.arrival ||
+    (Array.isArray(rawReturn.segments) &&
+      rawReturn.segments.length > 0)
+  );
 
 const resolvedTripType =
-  hasReturnFlight
+  rawFlight.tripType === "ROUND_TRIP" && hasReturnFlight
     ? "ROUND_TRIP"
-    : rawFlight.tripType === "ROUND_TRIP"
-      ? "ROUND_TRIP"
-      : "ONEWAY";
+    : "ONEWAY";
 
 const returnPrice = getValidNumber(
   rawFlight.returnFlight?.price,
