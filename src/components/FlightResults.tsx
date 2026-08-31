@@ -2415,13 +2415,21 @@ setPriceLimit(originalMax);
                   <div className="grid grid-cols-[70px_1fr] sm:grid-cols-[80px_1fr] gap-4">
                     {/* Departure */}
                     <div>
-                      <p className="text-xl font-bold text-white">
-                        {formatFlightTime(segment.departure)}
-                      </p>
-                      <p className="text-sm font-semibold text-cyan-200 mt-1">
-                        {segment.from || "--"}
-                      </p>
-                    </div>
+  <p className="text-xl font-bold text-white">
+    {formatFlightTime(segment.departure)}
+  </p>
+
+  <p className="text-sm font-semibold text-cyan-200 mt-1">
+    {segment.from || "--"}
+  </p>
+
+  <p className="text-xs text-white/50 mt-2">
+    To{" "}
+    <span className="text-white/80 font-medium">
+      {segment.to || "--"}
+    </span>
+  </p>
+</div>
 
                     {/* Segment details */}
                     <div>
