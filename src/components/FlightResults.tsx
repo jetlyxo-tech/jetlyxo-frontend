@@ -1408,6 +1408,8 @@ console.dir(response, {
 console.log(
   "========== FIRST FILTERED FLIGHT FULL DEBUG =========="
 );
+console.log("========== FILTERED FIRST FLIGHT JSON ==========");
+console.log(JSON.stringify(newFlights[0], null, 2));
 
 console.dir(newFlights[0], {
   depth: null,
