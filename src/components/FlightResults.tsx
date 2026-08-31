@@ -1602,14 +1602,48 @@ console.log(
   }))
 );
 
+const airlineFilteredFlights =
+  nextSelectedAirlines.length > 0
+    ? enrichedFlights.filter((flight: any) => {
+        const flightAirline =
+          String(flight?.airline ?? "").trim().toLowerCase();
+
+        const flightAirlineCode =
+          String(flight?.airlineCode ?? "").trim().toLowerCase();
+
+        return nextSelectedAirlines.some((selected: string) => {
+          const selectedValue =
+            String(selected ?? "").trim().toLowerCase();
+
+          return (
+            flightAirline === selectedValue ||
+            flightAirlineCode === selectedValue
+          );
+        });
+      })
+    : enrichedFlights;
+
+console.log("========== AIRLINE FILTER DEBUG ==========");
+console.log("Selected airlines:", nextSelectedAirlines);
+console.log("Before airline filter:", enrichedFlights.length);
+console.log("After airline filter:", airlineFilteredFlights.length);
+
+console.table(
+  airlineFilteredFlights.map((f: any) => ({
+    airline: f.airline,
+    airlineCode: f.airlineCode,
+    id: f.id,
+  }))
+);
+
 if (response.stid) {
   setSearchStid(response.stid);
 }
 
-setFlightList(enrichedFlights);
+setFlightList(airlineFilteredFlights);
 setProviderFiltered(true);
 
-setNextSkip(enrichedFlights.length);
+setNextSkip(airlineFilteredFlights.length);
 
 setHasMoreFlights(
   response.isComplete !== true
@@ -1626,7 +1660,7 @@ console.log({
 });
 
 
-if (!enrichedFlights.length) {
+if (!airlineFilteredFlights.length) {
   console.log(
     "Bonton returned 0 flights for selected filters"
   );
@@ -1640,7 +1674,7 @@ if (!enrichedFlights.length) {
           : "ONE_WAY",
 
         received:
-          enrichedFlights.length,
+           airlineFilteredFlights.length,
 
         nonStop:
           nextNonStop,
