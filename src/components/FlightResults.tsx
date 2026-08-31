@@ -472,24 +472,19 @@ console.log({
   /* ---------------------------------------------
      TOTAL PRICE
   --------------------------------------------- */
-
-const rawReturn = rawFlight.returnFlight;
+const rawReturn =
+  rawFlight.returnFlight ??
+  rawFlight.return ??
+  rawFlight.ret ??
+  rawFlight.returnFlightDetails ??
+  rawFlight.returnDetails ??
+  null;
 
 const hasReturnFlight =
-  rawReturn &&
-  (
-    rawReturn.id ||
-    rawReturn.tId ||
-    rawReturn.from ||
-    rawReturn.to ||
-    rawReturn.departure ||
-    rawReturn.arrival ||
-    (Array.isArray(rawReturn.segments) &&
-      rawReturn.segments.length > 0)
-  );
+  Boolean(rawReturn);
 
 const resolvedTripType =
-  rawFlight.tripType === "ROUND_TRIP" && hasReturnFlight
+  rawFlight.tripType === "ROUND_TRIP" || hasReturnFlight
     ? "ROUND_TRIP"
     : "ONEWAY";
 
@@ -605,17 +600,25 @@ const layoverSegment =
     ? segments[1]
     : undefined);
 
-  /* ---------------------------------------------
+    /* ---------------------------------------------
      RETURN FLIGHT
-  --------------------------------------------- */
+     --------------------------------------------- */
 
-  let normalizedReturnFlight:
-    | NormalizedFlight["returnFlight"]
-    | undefined;
+ let normalizedReturnFlight:
+  | NormalizedFlight["returnFlight"]
+  | undefined;
 
-  if (hasReturnFlight) {
-    const rawReturn = rawFlight.returnFlight;
+  const isRoundTrip =
+    String(
+      rawFlight.tripType ??
+      rawFlight.trip_type ??
+      ""
+    )
+      .toUpperCase()
+      .replace("-", "_") === "ROUND_TRIP" ||
+    Boolean(rawReturn);
 
+  if (isRoundTrip && rawReturn) {
     const rawReturnSegments =
       rawReturn.disseg ??
       rawReturn.fltseg ??
@@ -646,18 +649,23 @@ const layoverSegment =
     normalizedReturnFlight = {
       id: rawReturn.id,
 
-      tId: rawReturn.tId,
+      tId:
+        rawReturn.tId ??
+        rawReturn.tid ??
+        undefined,
 
       airline:
-        rawReturn.airline ||
-        rawReturn.airna ||
-        returnSegments[0]?.airline ||
+        rawReturn.airline ??
+        rawReturn.airna ??
+        rawReturn.airlineName ??
+        returnSegments[0]?.airline ??
+        rawFlight.airline ??
         "",
 
       airlineCode:
-        rawReturn.airlineCode ||
-        rawReturn.airco ||
-        returnSegments[0]?.airlineCode ||
+        rawReturn.airlineCode ??
+        rawReturn.airco ??
+        returnSegments[0]?.airlineCode ??
         "",
 
       from: returnFrom,
@@ -665,31 +673,44 @@ const layoverSegment =
       to: returnTo,
 
       departure:
-        rawReturn.departure,
+        rawReturn.departure ??
+        rawReturn.deptm ??
+        returnSegments[0]?.departure,
 
       arrival:
-        rawReturn.arrival,
+        rawReturn.arrival ??
+        rawReturn.arrtm ??
+        returnSegments[
+          returnSegments.length - 1
+        ]?.arrival,
 
       duration:
-        rawReturn.duration,
+        rawReturn.duration ??
+        rawReturn.dur ??
+        "",
 
-      stops: getStopCount(
-         rawReturn,
-         returnSegments
-),
+      stops:
+        typeof rawReturn.stops === "number"
+          ? rawReturn.stops
+          : Math.max(
+              returnSegments.length - 1,
+              0
+            ),
 
       price:
         Number(rawReturn.price ?? 0),
 
       seats:
-        rawReturn.seats,
+        rawReturn.seats ?? null,
 
       cabin:
         rawReturn.cabin ??
         "Economy",
 
       flightNumber:
-        rawReturn.flightNumber,
+        rawReturn.flightNumber ??
+        rawReturn.fltno ??
+        returnSegments[0]?.flightNumber,
 
       segments:
         returnSegments,
@@ -702,7 +723,6 @@ const layoverSegment =
         ),
     };
   }
-
   /* ---------------------------------------------
      DEBUG
   --------------------------------------------- */
@@ -1440,15 +1460,43 @@ console.log(
 
       
 const enrichedFlights = newFlights.map((flight: any) => {
- 
+  /*
+   * Bonton filter response may return the filtered
+   * outbound flight without the nested returnFlight.
+   *
+   * Therefore recover the return itinerary from
+   * the original round-trip search result.
+   */
 
- const hasReturnFlight =
-  Boolean(flight.returnFlight);
+  const originalMatch: any = originalFlights.find(
+  (original: any) =>
+    original?.id === flight?.id ||
+    original?.traceId === flight?.traceId ||
+    original?.tId === flight?.tId
+);
+  const providerReturnFlight =
+    flight?.returnFlight ??
+    flight?.return ??
+    flight?.ret ??
+    flight?.returnFlightDetails ??
+    flight?.returnDetails ??
+    null;
 
-const resolvedTripType =
-  hasReturnFlight
-    ? "ROUND_TRIP"
-    : flight.tripType === "ROUND_TRIP"
+  const originalReturnFlight =
+    originalMatch?.returnFlight ??
+    originalMatch?.return ??
+    originalMatch?.ret ??
+    originalMatch?.returnFlightDetails ??
+    originalMatch?.returnDetails ??
+    null;
+
+  const resolvedReturnFlight =
+    providerReturnFlight ??
+    originalReturnFlight ??
+    null;
+
+  const resolvedTripType =
+    isRoundTrip || Boolean(resolvedReturnFlight)
       ? "ROUND_TRIP"
       : "ONEWAY";
 
@@ -1457,6 +1505,7 @@ const resolvedTripType =
 
     searchId:
       flight.searchId ||
+      originalMatch?.searchId ||
       flightList[0]?.searchId ||
       originalFlights[0]?.searchId ||
       "",
@@ -1464,13 +1513,14 @@ const resolvedTripType =
     stid:
       flight.stid ||
       response.stid ||
+      originalMatch?.stid ||
       searchStid,
 
     tripType: resolvedTripType,
 
     returnFlight:
-      hasReturnFlight
-        ? flight.returnFlight
+      resolvedTripType === "ROUND_TRIP"
+        ? resolvedReturnFlight
         : undefined,
   };
 });
