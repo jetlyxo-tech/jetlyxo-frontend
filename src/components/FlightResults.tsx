@@ -1438,37 +1438,59 @@ console.log(
 
       
 const enrichedFlights = newFlights.map((flight: any) => {
- 
 
- const hasReturnFlight =
-  Boolean(flight.returnFlight);
 
-const resolvedTripType =
-  hasReturnFlight
-    ? "ROUND_TRIP"
-    : flight.tripType === "ROUND_TRIP"
-      ? "ROUND_TRIP"
-      : "ONEWAY";
+  const originalMatch = originalFlights.find(
+    (original: any) =>
+      String(original.id ?? "") ===
+      String(flight.id ?? "")
+  );
 
+  const providerReturnFlight =
+    flight.returnFlight ??
+    flight.return ??
+    flight.ret ??
+    null;
+
+ const originalReturnFlight =
+  (originalMatch as any)?.returnFlight ??
+  (originalMatch as any)?.return ??
+  (originalMatch as any)?.ret ??
+  null;
+
+  const resolvedReturnFlight =
+    providerReturnFlight ??
+    originalReturnFlight;
+
+ const isRoundTrip =
+  flight.tripType === "ROUND_TRIP" ||
+  (originalMatch as any)?.tripType === "ROUND_TRIP" ||
+  Boolean(resolvedReturnFlight);
+  
   return {
     ...flight,
 
     searchId:
       flight.searchId ||
+      originalMatch?.searchId ||
       flightList[0]?.searchId ||
       originalFlights[0]?.searchId ||
       "",
 
-    stid:
-      flight.stid ||
-      response.stid ||
-      searchStid,
+   stid:
+  flight.stid ||
+  response.stid ||
+  (originalMatch as any)?.stid ||
+  searchStid,
 
-    tripType: resolvedTripType,
+
+    tripType: isRoundTrip
+      ? "ROUND_TRIP"
+      : "ONEWAY",
 
     returnFlight:
-      hasReturnFlight
-        ? flight.returnFlight
+      isRoundTrip
+        ? resolvedReturnFlight
         : undefined,
   };
 });
