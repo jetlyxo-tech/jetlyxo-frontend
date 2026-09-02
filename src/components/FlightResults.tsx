@@ -316,6 +316,43 @@ function getSegmentAirlineName(
   );
 }
 
+
+const hasValidReturnFlight = (
+  returnFlight: any
+): boolean => {
+  if (
+    !returnFlight ||
+    typeof returnFlight !== "object"
+  ) {
+    return false;
+  }
+
+  const returnSegments =
+    returnFlight.disseg ??
+    returnFlight.fltseg ??
+    returnFlight.segments ??
+    [];
+
+  return Boolean(
+    returnFlight.id ||
+    returnFlight.from ||
+    returnFlight.to ||
+    returnFlight.org ||
+    returnFlight.des ||
+    returnFlight.departure ||
+    returnFlight.arrival ||
+    returnFlight.deptm ||
+    returnFlight.arrtm ||
+    returnFlight.flightNumber ||
+    returnFlight.fltno ||
+    (
+      Array.isArray(returnSegments) &&
+      returnSegments.length > 0
+    )
+  );
+};
+
+
 function normalizeFlight(
   flight: Flight,
   index: number
@@ -480,13 +517,27 @@ const rawReturn =
   rawFlight.returnDetails ??
   null;
 
+
+
 const hasReturnFlight =
-  Boolean(rawReturn);
+  hasValidReturnFlight(rawReturn);
+
+const rawTripType =
+  String(
+    rawFlight.tripType ??
+    rawFlight.trip_type ??
+    ""
+  )
+    .toUpperCase()
+    .replace("-", "_");
 
 const resolvedTripType =
-  rawFlight.tripType === "ROUND_TRIP" || hasReturnFlight
+  rawTripType === "ROUND_TRIP" &&
+  hasReturnFlight
     ? "ROUND_TRIP"
     : "ONEWAY";
+
+
 
 const returnPrice = getValidNumber(
   rawFlight.returnFlight?.price,
@@ -609,21 +660,15 @@ const layoverSegment =
   | undefined;
 
   const isRoundTrip =
-    String(
-      rawFlight.tripType ??
-      rawFlight.trip_type ??
-      ""
-    )
-      .toUpperCase()
-      .replace("-", "_") === "ROUND_TRIP" ||
-    Boolean(rawReturn);
+  resolvedTripType === "ROUND_TRIP";
 
-  if (isRoundTrip && rawReturn) {
-    const rawReturnSegments =
-      rawReturn.disseg ??
-      rawReturn.fltseg ??
-      rawReturn.segments ??
-      [];
+if (isRoundTrip && hasReturnFlight) {
+  const rawReturnSegments =
+    rawReturn.disseg ??
+    rawReturn.fltseg ??
+    rawReturn.segments ??
+    [];
+
 
     const returnSegments =
       normalizeSegments(rawReturnSegments);
@@ -1490,15 +1535,20 @@ const enrichedFlights = newFlights.map((flight: any) => {
     originalMatch?.returnDetails ??
     null;
 
-  const resolvedReturnFlight =
-    providerReturnFlight ??
-    originalReturnFlight ??
-    null;
+ const resolvedReturnFlight =
+  providerReturnFlight &&
+  hasValidReturnFlight(providerReturnFlight)
+    ? providerReturnFlight
+    : originalReturnFlight &&
+      hasValidReturnFlight(originalReturnFlight)
+    ? originalReturnFlight
+    : null;
 
-  const resolvedTripType =
-    isRoundTrip || Boolean(resolvedReturnFlight)
-      ? "ROUND_TRIP"
-      : "ONEWAY";
+const resolvedTripType =
+  isRoundTrip && resolvedReturnFlight
+    ? "ROUND_TRIP"
+    : "ONEWAY";
+
 
   return {
     ...flight,
@@ -1641,6 +1691,78 @@ if (response.stid) {
 }
 
 setFlightList(airlineFilteredFlights);
+
+const getActualStops = (flight: any): number => {
+  if (typeof flight?.stops === "number") {
+    return Math.max(flight.stops, 0);
+  }
+
+  const segments =
+    flight?.segments ??
+    flight?.diseg ??
+    flight?.fltseg ??
+    [];
+
+  return Array.isArray(segments)
+    ? Math.max(segments.length - 1, 0)
+    : 0;
+};
+
+const stopFilteredFlights =
+  nextNonStop || nextOneStop
+    ? airlineFilteredFlights.filter((flight: any) => {
+        const outboundStops =
+          getActualStops(flight);
+
+        const returnFlight =
+          flight?.returnFlight &&
+          hasValidReturnFlight(flight.returnFlight)
+            ? flight.returnFlight
+            : null;
+
+        // ONE-WAY
+        if (!returnFlight) {
+          if (nextNonStop && !nextOneStop) {
+            return outboundStops === 0;
+          }
+
+          if (nextOneStop && !nextNonStop) {
+            return outboundStops === 1;
+          }
+
+          return (
+            outboundStops === 0 ||
+            outboundStops === 1
+          );
+        }
+
+        // ROUND-TRIP
+        const returnStops =
+          getActualStops(returnFlight);
+
+        if (nextNonStop && !nextOneStop) {
+          return (
+            outboundStops === 0 &&
+            returnStops === 0
+          );
+        }
+
+        if (nextOneStop && !nextNonStop) {
+          return (
+            outboundStops === 1 &&
+            returnStops === 1
+          );
+        }
+
+        return (
+          (outboundStops === 0 ||
+            outboundStops === 1) &&
+          (returnStops === 0 ||
+            returnStops === 1)
+        );
+      })
+    : airlineFilteredFlights;
+
 setProviderFiltered(true);
 
 setNextSkip(airlineFilteredFlights.length);
