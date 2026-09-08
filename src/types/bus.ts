@@ -1,5 +1,5 @@
 export interface Bus {
-  id: number;
+  id: string | number;
 
   operator: string;
 
@@ -34,4 +34,13 @@ export interface Bus {
   createdAt?: string;
 
   updatedAt?: string;
+
+  provider?: string;
+
+  providerContext?: {
+    traceId: string;
+    busId: string;
+    bpid: string | number;
+    dpid: string | number;
+  };
 }

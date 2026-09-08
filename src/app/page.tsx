@@ -60,69 +60,24 @@ const [selectedService, setSelectedService] = useState<
     return Array.from(new Map(data.map(i => [i.id, i])).values());
   };
 
+ /* =========================
+   BUSES
+========================= */
+const handleBusesClick = useCallback(() => {
+  setSelectedService("buses");
 
-  /* =========================
-     BUSES
-  ========================= */
-  const handleBusesClick = useCallback(async () => {
-    //const token = localStorage.getItem("jetly_token");
-    const token = getToken();
-  if (!token) {
-    localStorage.setItem("redirectAfterLogin", "/");
-    router.push("/login");
-    return;
-  }
-    if (requestLock) return;
-    setRequestLock(true);
+  setFlightResults(null);
+  setBusResults(null);
+  setTrainResults(null);
+  setLoadingService(null);
 
-    setFlightResults(null);
-    setTrainResults(null);
-    setLoadingService("buses");
-
-    try {
-      const results = await searchBuses({
-        from: "BLR",
-        to: "HYD"
-      });
-
-      const formatted: Bus[] = results.map((bus: any) => ({
-        id: Number(bus.id),
-      
-        operator: bus.operator ?? "",
-      
-        busType: bus.busType ?? "",
-      
-        duration: bus.duration ?? "",
-      
-        seatsAvailable: bus.seatsAvailable ?? bus.seats ?? 0,
-      
-        busName: bus.busName ?? bus.operator,
-      
-        fromCity: bus.fromCity,
-      
-        toCity: bus.toCity,
-      
-        departure: bus.departure,
-      
-        arrival: bus.arrival,
-      
-        price: bus.price,
-      
-        seats: bus.seats,
-      }));
-  
-
-      setBusResults(dedupe(formatted));
-
-    } catch {
-      setBusResults([]);
-    } finally {
-      scrollToResults();
-      setLoadingService(null);
-      setRequestLock(false);
-    }
-
-  }, [scrollToResults, requestLock, router]);
+  setTimeout(() => {
+    document.getElementById("search")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, 100);
+}, []);
 
   /* =========================
      TRAINS
@@ -208,16 +163,8 @@ const [selectedService, setSelectedService] = useState<
   }, 100);
 }}
     onBusesClick={() => {
-      setSelectedService("buses");
-      handleBusesClick();
-
-      setTimeout(() => {
-        document.getElementById("search")?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      }, 100);
-    }}
+  handleBusesClick();
+}}
     onTrainsClick={() => {
       setSelectedService("trains");
       handleTrainsClick();
