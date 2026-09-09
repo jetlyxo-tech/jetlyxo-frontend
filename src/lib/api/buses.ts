@@ -133,7 +133,10 @@ export async function searchI2SpaceBuses(
            ? new Date(bus.timeA).toTimeString().slice(0, 5)
            : "",
 
-        duration: "",
+        duration:
+          typeof bus?.duration === "number"
+            ? `${Math.floor(bus.duration / 60)}h ${bus.duration % 60}m`
+            : "",
         price:
           typeof fare?.total === "number"
             ? fare.total
