@@ -107,6 +107,12 @@ export async function searchI2SpaceBuses(
       []
     ) as any[];
 
+   console.log("I2SPACE BUS TIME DEBUG:", {
+  name: rawBuses[0]?.name,
+  timeD: rawBuses[0]?.timeD,
+  timeA: rawBuses[0]?.timeA,
+});
+
     return rawBuses.map((bus) => {
       const fare = bus?.fares?.[0];
 
