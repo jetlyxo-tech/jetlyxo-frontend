@@ -93,7 +93,10 @@ export default function BusResults({ buses }: { buses: Bus[] }) {
   /* -------- NAVIGATION -------- */
 
   const handleBook = (bus: ReturnType<typeof normalizeBus>) => {
-    const token = localStorage.getItem("jetly_token");
+   const token = localStorage.getItem("jetly_token");
+
+const busTestMode =
+  process.env.NEXT_PUBLIC_BUS_TEST_MODE === "true";
 
     /*
      * Keep the provider context intact.
@@ -119,15 +122,15 @@ export default function BusResults({ buses }: { buses: Bus[] }) {
 
     /* NOT LOGGED IN */
 
-    if (!token) {
-      localStorage.setItem(
-        "redirectAfterLogin",
-        JSON.stringify(bookingData)
-      );
+   if (!token && !busTestMode) {
+  localStorage.setItem(
+    "redirectAfterLogin",
+    JSON.stringify(bookingData)
+  );
 
-      router.push("/login");
-      return;
-    }
+  router.push("/login");
+  return;
+}
 
     /* LOGGED IN */
 
