@@ -17,7 +17,7 @@ import type { Bus } from "@/types/bus";
 import type { Train } from "@/types/train";
 import { getToken } from "@/lib/auth";
 import { useRouter } from "next/navigation";
-import { searchBuses, searchTrains } from "@/lib/api";
+import { searchTrains } from "@/lib/api";
 export default function Home() {
   
   const router = useRouter();
@@ -179,14 +179,28 @@ const handleBusesClick = useCallback(() => {
   />
 </Hero>
 
-{selectedService === "flights" && (
+{selectedService && (
   <div id="search" className="container mx-auto px-4 py-8">
     <SearchWidget
-      service="flights"
+      service={selectedService}
       onFlightResultsAction={(results) => {
-        setFlightResults(results);
-        setBusResults(null);
-        setTrainResults(null);
+        if (selectedService === "flights") {
+          setFlightResults(results);
+          setBusResults(null);
+          setTrainResults(null);
+        }
+
+ if (selectedService === "buses") {
+  setBusResults(results as Bus[]);
+  setFlightResults(null);
+  setTrainResults(null);
+}
+
+if (selectedService === "trains") {
+  setTrainResults(results as Train[]);
+  setFlightResults(null);
+  setBusResults(null);
+}
       }}
       onScrollToResultsAction={scrollToResults}
     />

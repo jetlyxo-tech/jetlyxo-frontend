@@ -18,8 +18,13 @@ import {
   RotateCcw,
 } from "lucide-react";
 
-import { searchFlights } from "@/lib/api";
+import {
+  searchFlights,
+  searchI2SpaceBuses,
+} from "@/lib/api";
 import type { Flight } from "@/types";
+import type { Bus } from "@/types/bus";
+import type { Train } from "@/types/train";
 
 type Tab = "one-way" | "round-trip" | "multi-city";
 
@@ -37,7 +42,10 @@ type Props = {
   onFlightResults?: (results: Flight[]) => void;
   onScrollToResults?: () => void;
 
-  onFlightResultsAction?: (results: Flight[]) => void;
+  onFlightResultsAction?: (
+    results: Flight[] | Bus[] | Train[]
+  ) => void;
+
   onScrollToResultsAction?: () => void;
 };
 
@@ -109,10 +117,13 @@ const [cabin, setCabin] = useState("economy");
 
   const [showTravellerPanel, setShowTravellerPanel] = useState(false);
 
-  const publish = (results: Flight[]) => {
-    onFlightResults?.(results);
-    onFlightResultsAction?.(results);
-  };
+ const publish = (results: Flight[] | Bus[] | Train[]) => {
+  if (service === "flights") {
+    onFlightResults?.(results as Flight[]);
+  }
+
+  onFlightResultsAction?.(results);
+};
 
   const scroll = () => {
     onScrollToResults?.();
@@ -235,17 +246,38 @@ useEffect(() => {
 
   if (loading) return;
 
-if (!selectedFromCode) {
+if (!from.trim()) {
+  setError(
+    service === "buses"
+      ? "Please enter a departure city."
+      : "Please select a departure airport."
+  );
+  return;
+}
+
+if (!to.trim()) {
+  setError(
+    service === "buses"
+      ? "Please enter a destination city."
+      : "Please select a destination airport."
+  );
+  return;
+}
+
+if (service !== "buses" && !selectedFromCode) {
   setError("Please select a departure airport from the suggestions.");
   return;
 }
 
-if (!selectedToCode) {
+if (service !== "buses" && !selectedToCode) {
   setError("Please select a destination airport from the suggestions.");
   return;
 }
 
-if (selectedFromCode === selectedToCode) {
+if (
+  service !== "buses" &&
+  selectedFromCode === selectedToCode
+) {
   setError("Departure and destination airports cannot be the same.");
   return;
 }
@@ -253,7 +285,7 @@ if (selectedFromCode === selectedToCode) {
 if (!departure) {
   setError("Please select a departure date.");
   return;
-}
+}  
 
 if (
   activeTab === "round-trip" &&
@@ -300,16 +332,34 @@ setError("");
     activeTab === "one-way" ? "ONE_WAY" : "ROUND_TRIP",
 };
 
-      const results = await searchFlights(params as any);
+if (service === "buses") {
+  const results = await searchI2SpaceBuses({
+    from: from.trim(),
+    to: to.trim(),
+    date: departure,
+  });
 
-      publish(results);
+  publish(results);
 
-      if (results.length === 0) {
-        setError("No flights found.");
-      }
+  if (results.length === 0) {
+    setError(`No buses found from ${from} to ${to}.`);
+  }
 
-      scroll();
-    } catch (err: any) {
+  scroll();
+  return;
+}
+
+const results = await searchFlights(params as any);
+
+publish(results);
+
+if (results.length === 0) {
+  setError("No flights found.");
+}
+
+scroll();
+
+} catch (err: any) {
       console.error(err);
       setError(err.message || "Search failed");
     } finally {
@@ -391,7 +441,7 @@ setError("");
             <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
               <div>
                 <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-white">
-                  Find Your Perfect Flight
+                  Search Flights
                 </h2>
 
                 <p className="mt-1.5 text-sm text-slate-400">
