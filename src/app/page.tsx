@@ -5,6 +5,7 @@ import { useRef, useState, useCallback, useEffect } from "react";
 import Hero from "@/components/Hero";
 import Services from "@/components/Services";
 import SearchWidget from "@/components/SearchWidget";
+import BusSearchWidget from "@/components/BusSearchWidget";
 import FlightResults from "@/components/FlightResults";
 import BusResults from "@/components/BusResults";
 import TrainResults from "@/components/TrainResults";
@@ -181,29 +182,36 @@ const handleBusesClick = useCallback(() => {
 
 {selectedService && (
   <div id="search" className="container mx-auto px-4 py-8">
-    <SearchWidget
-      service={selectedService}
-      onFlightResultsAction={(results) => {
-        if (selectedService === "flights") {
-          setFlightResults(results);
-          setBusResults(null);
+
+    {selectedService === "buses" ? (
+      <BusSearchWidget
+        onResults={(results) => {
+          setBusResults(results);
+          setFlightResults(null);
           setTrainResults(null);
-        }
+        }}
+        onScrollToResults={scrollToResults}
+      />
+    ) : (
+      <SearchWidget
+        service={selectedService}
+        onFlightResultsAction={(results) => {
+          if (selectedService === "flights") {
+            setFlightResults(results);
+            setBusResults(null);
+            setTrainResults(null);
+          }
 
- if (selectedService === "buses") {
-  setBusResults(results as Bus[]);
-  setFlightResults(null);
-  setTrainResults(null);
-}
+          if (selectedService === "trains") {
+            setTrainResults(results as Train[]);
+            setFlightResults(null);
+            setBusResults(null);
+          }
+        }}
+        onScrollToResultsAction={scrollToResults}
+      />
+    )}
 
-if (selectedService === "trains") {
-  setTrainResults(results as Train[]);
-  setFlightResults(null);
-  setBusResults(null);
-}
-      }}
-      onScrollToResultsAction={scrollToResults}
-    />
   </div>
 )}
 
