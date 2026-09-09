@@ -119,11 +119,15 @@ export async function searchI2SpaceBuses(
         fromCity: params.from,
         toCity: params.to,
 
-        departure: bus?.timeD ?? "",
-        arrival: bus?.timeA ?? "",
+        departure: bus?.timeD
+          ? new Date(bus.timeD).toTimeString().slice(0, 5)
+          : "",
 
-        duration: bus?.duration ?? "",
+         arrival: bus?.timeA
+           ? new Date(bus.timeA).toTimeString().slice(0, 5)
+           : "",
 
+        duration: "",
         price:
           typeof fare?.total === "number"
             ? fare.total
