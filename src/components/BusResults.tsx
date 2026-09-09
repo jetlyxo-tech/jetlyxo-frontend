@@ -95,8 +95,7 @@ export default function BusResults({ buses }: { buses: Bus[] }) {
   const handleBook = (bus: ReturnType<typeof normalizeBus>) => {
    const token = localStorage.getItem("jetly_token");
 
-const busTestMode =
-  process.env.NEXT_PUBLIC_BUS_TEST_MODE === "true";
+const busTestMode = true;
 
     /*
      * Keep the provider context intact.
