@@ -101,11 +101,59 @@ export async function searchI2SpaceBuses(
       },
     });
 
-    return (
+    const rawBuses = (
       response.data?.data ??
       response.data ??
       []
-    ) as Bus[];
+    ) as any[];
+
+    return rawBuses.map((bus) => {
+      const fare = bus?.fares?.[0];
+
+      return {
+        id: String(bus?.id ?? ""),
+        operator: bus?.name ?? "Bus",
+        busName: bus?.name ?? "Bus",
+        busType: bus?.type ?? "Bus",
+
+        fromCity: params.from,
+        toCity: params.to,
+
+        departure: bus?.timeD ?? "",
+        arrival: bus?.timeA ?? "",
+
+        duration: bus?.duration ?? "",
+
+        price:
+          typeof fare?.total === "number"
+            ? fare.total
+            : 0,
+
+        seatsAvailable:
+          typeof bus?.seats?.avlAll === "number"
+            ? bus.seats.avlAll
+            : 0,
+
+        availableSeats:
+          typeof bus?.seats?.avlAll === "number"
+            ? bus.seats.avlAll
+            : 0,
+
+        boardingPoint:
+          bus?.boarding?.[0]?.name ??
+          bus?.boarding?.[0]?.point ??
+          "",
+
+        droppingPoint:
+          bus?.dropping?.[0]?.name ??
+          bus?.dropping?.[0]?.point ??
+          "",
+
+        provider: "I2SPACE",
+
+        providerContext: bus?.providerContext,
+      };
+    });
   } catch (error) {
     const err = error as AxiosError<{
       message?: string;
